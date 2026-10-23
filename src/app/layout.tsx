@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Noto_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import { LocaleProvider } from "@/components/locale-provider";
 import { LanguageToggle } from "@/components/language-toggle";
+import { AuthProvider } from "@/lib/auth/auth-provider";
+import { HeaderAuthLink } from "@/components/header-auth-link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,19 +34,24 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${notoSansArabic.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-bg text-text">
-        <LocaleProvider>
-          <header className="border-b border-border">
-            <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-              <span className="text-sm font-medium text-text-muted">
-                My AI Brand Studio
-              </span>
-              <LanguageToggle />
-            </div>
-          </header>
-          <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-            {children}
-          </main>
-        </LocaleProvider>
+        <AuthProvider>
+          <LocaleProvider>
+            <header className="border-b border-border">
+              <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+                <span className="text-sm font-medium text-text-muted">
+                  My AI Brand Studio
+                </span>
+                <div className="flex items-center gap-3">
+                  <HeaderAuthLink />
+                  <LanguageToggle />
+                </div>
+              </div>
+            </header>
+            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+              {children}
+            </main>
+          </LocaleProvider>
+        </AuthProvider>
       </body>
     </html>
   );
