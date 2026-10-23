@@ -41,16 +41,16 @@ capabilities/limits for your intended region — it's a newer product and specif
 
 ## 4. Core services
 
-| Concern | Choice | Notes |
-|---|---|---|
-| Auth | Firebase Authentication | Email/password + Google OAuth to start. Custom claims carry `orgId` + `role`. |
-| Database | Firestore | See `03-data-model.md`. Modeled multi-tenant from day one (see §6). |
-| File storage | Firebase Storage | Scoped by org/brand path prefix; rules enforce membership. |
-| Server compute | Cloud Functions (2nd gen) / Next.js server runtime | TypeScript throughout. |
-| AI Gateway | Custom adapter layer, see §5 | Provider-agnostic interface; never called from the client. |
-| Secrets | Firebase Functions params + Secret Manager | No secrets in `.env` files committed to git. |
-| CI/CD | GitHub Actions | Lint, typecheck, unit tests, emulator-backed integration tests, build, preview-channel deploy on PR, gated deploy to staging/prod. |
-| Observability | Cloud Logging (structured logs from Functions) + in-app usage/budget views | Add Sentry or similar only if/when error volume justifies the dependency — not a day-one requirement. |
+| Concern        | Choice                                                                     | Notes                                                                                                                              |
+| -------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Auth           | Firebase Authentication                                                    | Email/password + Google OAuth to start. Custom claims carry `orgId` + `role`.                                                      |
+| Database       | Firestore                                                                  | See `03-data-model.md`. Modeled multi-tenant from day one (see §6).                                                                |
+| File storage   | Firebase Storage                                                           | Scoped by org/brand path prefix; rules enforce membership.                                                                         |
+| Server compute | Cloud Functions (2nd gen) / Next.js server runtime                         | TypeScript throughout.                                                                                                             |
+| AI Gateway     | Custom adapter layer, see §5                                               | Provider-agnostic interface; never called from the client.                                                                         |
+| Secrets        | Firebase Functions params + Secret Manager                                 | No secrets in `.env` files committed to git.                                                                                       |
+| CI/CD          | GitHub Actions                                                             | Lint, typecheck, unit tests, emulator-backed integration tests, build, preview-channel deploy on PR, gated deploy to staging/prod. |
+| Observability  | Cloud Logging (structured logs from Functions) + in-app usage/budget views | Add Sentry or similar only if/when error volume justifies the dependency — not a day-one requirement.                              |
 
 ## 5. AI Gateway design
 
@@ -58,7 +58,7 @@ A single TypeScript interface, implemented once per provider:
 
 ```ts
 interface AIProvider {
-  id: string;                 // "groq", "mistral", "openrouter", "gemini", ...
+  id: string; // "groq", "mistral", "openrouter", "gemini", ...
   supports: ("text" | "structured" | "vision" | "image")[];
   generate(req: GenerationRequest): Promise<GenerationResult>;
 }
@@ -100,6 +100,7 @@ interface AIProvider {
 
 Model data under `/organizations/{orgId}/...` from the very first milestone, even though v1 only ever
 creates one org per signing-up user automatically. This means:
+
 - Firestore security rules and Cloud Functions authorization are already role/org-scoped, so adding
   "invite a teammate" or "add a second brand" later is a UI feature, not a data-model migration.
   Adding paid plans/billing later is additive (`/organizations/{orgId}/billing`), not a restructuring.

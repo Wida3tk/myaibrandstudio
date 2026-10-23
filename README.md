@@ -16,6 +16,19 @@ documented below. Nothing has been installed, deployed, or implemented yet — s
 4. [Phase 1 — Data Model](docs/03-data-model.md)
 5. [Phase 1 — Roadmap & Acceptance Criteria](docs/04-roadmap-acceptance-criteria.md)
 6. [Phase 2 — Tooling, Skills & MCP Recommendations](docs/05-tooling-recommendations.md)
+7. [Firebase project setup](docs/06-firebase-setup.md) — one-time steps once you're ready to create real Firebase projects
+
+## Development
+
+```bash
+npm install
+npm run dev          # http://localhost:3000
+npm run lint
+npm run typecheck
+npm test
+```
+
+No Firebase project is wired up yet — see [docs/06-firebase-setup.md](docs/06-firebase-setup.md).
 
 ## Stack (decided, not yet implemented)
 

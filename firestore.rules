@@ -1,0 +1,100 @@
+rules_version = '2';
+
+// Any path not explicitly matched below is denied by default — this is Firestore's
+// built-in behavior, not something this file has to implement. See docs/03-data-model.md
+// for the collection shapes this mirrors.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function memberDoc(orgId) {
+      return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+    }
+
+    function isMember(orgId) {
+      return isSignedIn() && memberDoc(orgId).data != null;
+    }
+
+    function role(orgId) {
+      return memberDoc(orgId).data.role;
+    }
+
+    function isEditorOrOwner(orgId) {
+      return isMember(orgId) && (role(orgId) == 'editor' || role(orgId) == 'owner');
+    }
+
+    function isOwner(orgId) {
+      return isMember(orgId) && role(orgId) == 'owner';
+    }
+
+    match /users/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /organizations/{orgId} {
+      allow read: if isMember(orgId);
+      allow update: if isOwner(orgId);
+      allow create, delete: if false; // only via Cloud Functions (Admin SDK bypasses these rules)
+
+      match /members/{uid} {
+        allow read: if isMember(orgId);
+        allow write: if isOwner(orgId);
+      }
+
+      match /brands/{brandId} {
+        allow read: if isMember(orgId);
+        allow create, update: if isEditorOrOwner(orgId);
+        allow delete: if isOwner(orgId);
+
+        match /contentItems/{itemId} {
+          allow read: if isMember(orgId);
+          allow create, update: if isEditorOrOwner(orgId);
+          allow delete: if isOwner(orgId);
+        }
+
+        match /calendarEntries/{entryId} {
+          allow read: if isMember(orgId);
+          allow write: if isEditorOrOwner(orgId);
+        }
+
+        match /assets/{assetId} {
+          allow read: if isMember(orgId);
+          allow write: if isEditorOrOwner(orgId);
+        }
+
+        match /templates/{templateId} {
+          allow read: if isMember(orgId);
+          allow write: if isEditorOrOwner(orgId);
+        }
+
+        match /approvals/{approvalId} {
+          allow read: if isMember(orgId);
+          allow write: if isEditorOrOwner(orgId);
+        }
+
+        match /analyticsSnapshots/{snapshotId} {
+          allow read: if isMember(orgId);
+          allow write: if false; // written only by Cloud Functions
+        }
+      }
+    }
+
+    // Budget meter data: org members may read their own org's usage, never write it.
+    match /usage/{orgId}/{document=**} {
+      allow read: if isMember(orgId);
+      allow write: if false;
+    }
+
+    // Admin-only / system-managed: no client access at all, by design (see architecture plan §7).
+    match /providerConfigs/{providerId} {
+      allow read, write: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow read, write: if false;
+    }
+  }
+}

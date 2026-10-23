@@ -8,13 +8,13 @@ checked against official docs in this session, dated.
 Produced via the `free-llm-api-advisor` skill, which re-checks official provider docs rather than
 relying on community lists. Full detail and sources are in `01-architecture-plan.md` §5. Summary:
 
-| Provider | Free tier commercial-OK? | Training on your data? | Role here |
-|---|---|---|---|
-| Groq | Yes (Services Agreement) | No; logs ≤30 days, ZDR optional | Primary |
-| Mistral (free mode) | Not addressed either way | Yes, unless you opt out (do so immediately) | Fallback |
-| OpenRouter `:free` | Depends on upstream model | Upstream-dependent; opt-out setting exists | Fallback / breadth |
-| Gemini unpaid tier | Business-use only, not EEA/UK/CH | **Yes** — used to improve products, human-reviewed | **Not used** for client content |
-| NVIDIA NIM / Cohere trial | **No** — explicitly trial/prototype-only | n/a | **Not used** |
+| Provider                  | Free tier commercial-OK?                 | Training on your data?                             | Role here                       |
+| ------------------------- | ---------------------------------------- | -------------------------------------------------- | ------------------------------- |
+| Groq                      | Yes (Services Agreement)                 | No; logs ≤30 days, ZDR optional                    | Primary                         |
+| Mistral (free mode)       | Not addressed either way                 | Yes, unless you opt out (do so immediately)        | Fallback                        |
+| OpenRouter `:free`        | Depends on upstream model                | Upstream-dependent; opt-out setting exists         | Fallback / breadth              |
+| Gemini unpaid tier        | Business-use only, not EEA/UK/CH         | **Yes** — used to improve products, human-reviewed | **Not used** for client content |
+| NVIDIA NIM / Cohere trial | **No** — explicitly trial/prototype-only | n/a                                                | **Not used**                    |
 
 Re-verify this table before Phase 3 implementation if more than a few weeks pass — these terms and
 limits drift, which is exactly why the skill exists.

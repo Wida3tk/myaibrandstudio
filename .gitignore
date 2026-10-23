@@ -15,3 +15,7 @@ ui-debug.log
 Thumbs.db
 .vscode/
 .idea/
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+*.pem

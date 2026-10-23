@@ -14,7 +14,7 @@ org per user. Paths below use `{curly}` for document IDs.
   /brands/{brandId}
       name, logoAssetPath, voice { tone, doNotUse[], sampleCopy[] }
       audience { description, locales[] }     // e.g. ["ar-SA", "en-US"]
-      objectives[] 
+      objectives[]
       memory { facts[], lastUpdatedAt }        // persistent brand memory, structured key facts
       createdAt, updatedAt
 
