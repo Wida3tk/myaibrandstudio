@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "myaibrandstudio-dev",
+    "dev": "myaibrandstudio-dev",
+    "staging": "myaibrandstudio-staging",
+    "prod": "myaibrandstudio-prod"
+  }
+}
