@@ -10,12 +10,31 @@ export function HeaderAuthLink() {
     return null;
   }
 
+  if (!user) {
+    return (
+      <Link
+        href="/login"
+        className="rounded-md border border-border px-3 py-1.5 text-sm text-text hover:bg-surface"
+      >
+        Sign in
+      </Link>
+    );
+  }
+
   return (
-    <Link
-      href={user ? "/brand" : "/login"}
-      className="rounded-md border border-border px-3 py-1.5 text-sm text-text hover:bg-surface"
-    >
-      {user ? "Brand profile" : "Sign in"}
-    </Link>
+    <div className="flex items-center gap-2">
+      <Link
+        href="/content/new"
+        className="rounded-md border border-border px-3 py-1.5 text-sm text-text hover:bg-surface"
+      >
+        Generate content
+      </Link>
+      <Link
+        href="/brand"
+        className="rounded-md border border-border px-3 py-1.5 text-sm text-text hover:bg-surface"
+      >
+        Brand profile
+      </Link>
+    </div>
   );
 }

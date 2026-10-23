@@ -1,6 +1,7 @@
 import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { getFunctions, type Functions } from "firebase/functions";
 import { getFirebaseConfig } from "./config";
 
 // Lazy singletons. Next.js prerenders client components on the server (even for pages marked
@@ -10,6 +11,7 @@ import { getFirebaseConfig } from "./config";
 let app: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
 let dbInstance: Firestore | undefined;
+let functionsInstance: Functions | undefined;
 
 function getFirebaseApp(): FirebaseApp {
   if (!app) {
@@ -30,4 +32,11 @@ export function getFirebaseDb(): Firestore {
     dbInstance = getFirestore(getFirebaseApp());
   }
   return dbInstance;
+}
+
+export function getFirebaseFunctions(): Functions {
+  if (!functionsInstance) {
+    functionsInstance = getFunctions(getFirebaseApp());
+  }
+  return functionsInstance;
 }
