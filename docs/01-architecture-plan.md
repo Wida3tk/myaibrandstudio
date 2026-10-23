@@ -115,7 +115,31 @@ creates one org per signing-up user automatically. This means:
   params, scoped per environment (dev/staging/prod each get their own keys).
 - Rate limiting and per-org budget ceilings are enforced server-side (§5), not just in the UI.
 
-## 8. Environments
+## 8. Staying on the free (Spark) plan as long as possible
+
+Confirmed against Firebase's own docs (2026): **Auth and Firestore are free on Spark, no billing
+account needed.** Cloud Storage for Firebase has required Blaze (pay-as-you-go) for every bucket,
+including the default one, since February 2026 — there is no free-tier path around that. Cloud
+Functions (and any other server-side compute, including Firebase App Hosting) has always required
+Blaze, regardless of actual usage.
+
+Given that, the build order is deliberately sequenced to delay Blaze as long as the architecture
+allows:
+
+- **M0 + M1 run entirely on Spark.** `firestore.rules` allows a signed-in user to self-serve-create
+  their own organization (naming themselves `ownerUid`) and their own `owner` membership doc directly
+  from the client SDK — no Cloud Function needed to bootstrap a new org. This is why `organizations`
+  and `members` creation rules aren't simply "Cloud Functions only."
+- **Storage is deliberately not enabled yet.** Nothing before M3 (asset library) needs it; enabling it
+  early would force a Blaze upgrade with no corresponding feature to show for it yet.
+- **Cloud Functions become unavoidable at M2**, because that's where provider API keys first need to
+  live server-side (the AI gateway, §5). There's no way to keep that off Blaze on this stack — but
+  Blaze's free quota (as of this writing: 2M function invocations/month, 400,000 GB-seconds compute)
+  means actual cost stays $0 for a single low-volume org. Set a Google Cloud **budget alert** (free, a
+  few clicks in the console) the same day Blaze is linked, so any real spend is flagged before it
+  happens rather than discovered on a bill.
+
+## 9. Environments
 
 Three separate Firebase projects (e.g. `myaibrandstudio-dev`, `-staging`, `-prod`), each with its own
 Auth tenant, Firestore instance, Storage bucket, and Functions deployment. `.firebaserc` holds the

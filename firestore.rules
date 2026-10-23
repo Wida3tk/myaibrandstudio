@@ -37,11 +37,23 @@ service cloud.firestore {
     match /organizations/{orgId} {
       allow read: if isMember(orgId);
       allow update: if isOwner(orgId);
-      allow create, delete: if false; // only via Cloud Functions (Admin SDK bypasses these rules)
+      // Self-serve bootstrap: a signed-in user may create an org naming themselves as owner,
+      // with no Cloud Function required. This is what keeps M0/M1 usable on the free Spark plan —
+      // Cloud Functions (and therefore Blaze) only become necessary starting with the AI gateway.
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if false;
 
       match /members/{uid} {
         allow read: if isMember(orgId);
-        allow write: if isOwner(orgId);
+        // The matching bootstrap case: a user may create their OWN membership doc as "owner",
+        // but only once the org doc above already exists and names them as its owner. The app
+        // must create the org doc first and wait for it to commit before creating this one —
+        // not as a single atomic batch, since rule evaluation for a batched write can't see a
+        // sibling write's not-yet-committed document.
+        allow create: if isSignedIn() && uid == request.auth.uid
+          && request.resource.data.role == 'owner'
+          && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerUid == request.auth.uid;
+        allow update, delete: if isOwner(orgId);
       }
 
       match /brands/{brandId} {
