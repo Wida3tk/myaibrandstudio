@@ -11,7 +11,12 @@ import {
 import { getFirebaseDb } from "@/lib/firebase/client";
 import type { GeneratedContent } from "@/lib/ai/generate";
 import type { ContentType, Language } from "@/lib/ai/types";
-import type { ContentItem, ContentStatus, HistoryEntry } from "./schema";
+import type {
+  ContentItem,
+  ContentStatus,
+  HistoryEntry,
+  Platform,
+} from "./schema";
 
 function contentItemsCollection(orgId: string, brandId: string) {
   return collection(
@@ -33,6 +38,7 @@ export async function createDraftContentItem(
     language: Language;
     topic: string;
     structuredPayload: GeneratedContent;
+    platformTargets: Platform[];
   },
 ): Promise<string> {
   const historyEntry: HistoryEntry = {
@@ -48,6 +54,7 @@ export async function createDraftContentItem(
     language: input.language,
     topic: input.topic,
     structuredPayload: input.structuredPayload,
+    platformTargets: input.platformTargets,
     status: "draft",
     history: [historyEntry],
     createdBy: uid,
@@ -76,6 +83,7 @@ export async function listContentItems(
       status: data.status,
       history: data.history ?? [],
       createdBy: data.createdBy,
+      platformTargets: data.platformTargets ?? [],
     } satisfies ContentItem;
   });
 }

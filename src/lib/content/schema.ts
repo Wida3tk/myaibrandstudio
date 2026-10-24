@@ -22,6 +22,13 @@ export const generatedContentSchema = z.object({
   callToAction: z.string(),
 });
 
+// M4 scope: which platforms this content is previewed/targeted for. Each has its own preview
+// chrome — see src/components/platform-previews/.
+export const platformSchema = z.enum(["instagram", "x", "linkedin", "tiktok"]);
+export type Platform = z.infer<typeof platformSchema>;
+
+export const PLATFORMS: Platform[] = ["instagram", "x", "linkedin", "tiktok"];
+
 export const contentItemSchema = z.object({
   id: z.string(),
   type: z.enum(["post", "hook", "caption", "script", "calendar-note"]),
@@ -31,5 +38,6 @@ export const contentItemSchema = z.object({
   status: contentStatusSchema,
   history: z.array(historyEntrySchema),
   createdBy: z.string(),
+  platformTargets: z.array(platformSchema),
 });
 export type ContentItem = z.infer<typeof contentItemSchema>;

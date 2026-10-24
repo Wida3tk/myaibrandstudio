@@ -5,13 +5,15 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { ensureOrgForUser } from "@/lib/org/bootstrap";
 import { PRIMARY_BRAND_ID } from "@/lib/brand/schema";
-import {
-  generateContent,
-  type GeneratedContent,
-  type GenerateContentOutput,
-} from "@/lib/ai/generate";
+import { getBrandProfile } from "@/lib/brand/data";
+import { generateContent, type GenerateContentOutput } from "@/lib/ai/generate";
 import type { ContentType, Language } from "@/lib/ai/types";
 import { createDraftContentItem } from "@/lib/content/data";
+import { PLATFORMS, type Platform } from "@/lib/content/schema";
+import {
+  PLATFORM_LABEL,
+  PlatformPreview,
+} from "@/components/platform-previews";
 
 const CONTENT_TYPES: ContentType[] = [
   "post",
@@ -26,9 +28,11 @@ export default function NewContentPage() {
   const router = useRouter();
 
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [brandName, setBrandName] = useState("Your Brand");
   const [contentType, setContentType] = useState<ContentType>("post");
   const [language, setLanguage] = useState<Language>("en");
   const [topic, setTopic] = useState("");
+  const [platforms, setPlatforms] = useState<Platform[]>(["instagram"]);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,8 +47,21 @@ export default function NewContentPage() {
 
   useEffect(() => {
     if (!user) return;
-    ensureOrgForUser(user).then(setOrgId);
+    (async () => {
+      const resolvedOrgId = await ensureOrgForUser(user);
+      setOrgId(resolvedOrgId);
+      const brand = await getBrandProfile(resolvedOrgId);
+      if (brand?.name) setBrandName(brand.name);
+    })();
   }, [user]);
+
+  function togglePlatform(platform: Platform) {
+    setPlatforms((prev) =>
+      prev.includes(platform)
+        ? prev.filter((p) => p !== platform)
+        : [...prev, platform],
+    );
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -79,6 +96,7 @@ export default function NewContentPage() {
         language,
         topic,
         structuredPayload: result.structured,
+        platformTargets: platforms,
       });
       setSaved(true);
     } catch (err) {
@@ -134,6 +152,22 @@ export default function NewContentPage() {
           />
         </label>
 
+        <fieldset className="flex flex-col gap-1 text-sm text-text-muted">
+          <legend className="mb-1">Preview for</legend>
+          <div className="flex flex-wrap gap-3">
+            {PLATFORMS.map((platform) => (
+              <label key={platform} className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={platforms.includes(platform)}
+                  onChange={() => togglePlatform(platform)}
+                />
+                {PLATFORM_LABEL[platform]}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <button
@@ -147,11 +181,21 @@ export default function NewContentPage() {
 
       {result && (
         <>
-          <GeneratedContentPreview
-            content={result.structured}
-            language={language}
-          />
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-6 flex flex-wrap gap-6">
+            {(platforms.length > 0
+              ? platforms
+              : (["instagram"] as Platform[])
+            ).map((platform) => (
+              <PlatformPreview
+                key={platform}
+                platform={platform}
+                brandName={brandName}
+                content={result.structured}
+                language={language}
+              />
+            ))}
+          </div>
+          <div className="mt-4 flex items-center gap-3">
             <button
               type="button"
               onClick={handleSaveDraft}
@@ -169,34 +213,5 @@ export default function NewContentPage() {
         </>
       )}
     </div>
-  );
-}
-
-function GeneratedContentPreview({
-  content,
-  language,
-}: {
-  content: GeneratedContent;
-  language: Language;
-}) {
-  return (
-    <section
-      dir={language === "ar" ? "rtl" : "ltr"}
-      lang={language}
-      className="mt-6 rounded-md border border-border bg-surface p-4 text-start"
-    >
-      <h2 className="font-semibold text-text">{content.hook}</h2>
-      <p className="mt-2 text-text">{content.caption}</p>
-      {content.hashtags.length > 0 && (
-        <p className="mt-2 text-sm text-text-muted">
-          {content.hashtags.map((tag) => `#${tag.replace(/^#/, "")}`).join(" ")}
-        </p>
-      )}
-      {content.callToAction && (
-        <p className="mt-2 text-sm font-medium text-accent">
-          {content.callToAction}
-        </p>
-      )}
-    </section>
   );
 }

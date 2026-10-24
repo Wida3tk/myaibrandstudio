@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { ensureOrgForUser } from "@/lib/org/bootstrap";
 import { PRIMARY_BRAND_ID } from "@/lib/brand/schema";
+import { getBrandProfile } from "@/lib/brand/data";
 import {
   listContentItems,
   nextStatus,
   transitionContentItem,
 } from "@/lib/content/data";
 import type { ContentItem, ContentStatus } from "@/lib/content/schema";
+import { PlatformPreview } from "@/components/platform-previews";
 
 const STATUS_LABEL: Record<ContentStatus, string> = {
   draft: "Draft",
@@ -29,6 +31,7 @@ export default function ContentListPage() {
   const router = useRouter();
 
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [brandName, setBrandName] = useState("Your Brand");
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -51,6 +54,8 @@ export default function ContentListPage() {
     (async () => {
       const resolvedOrgId = await ensureOrgForUser(user);
       setOrgId(resolvedOrgId);
+      const brand = await getBrandProfile(resolvedOrgId);
+      if (brand?.name) setBrandName(brand.name);
       await refresh(resolvedOrgId);
       setLoading(false);
     })();
@@ -122,20 +127,29 @@ export default function ContentListPage() {
                 </button>
 
                 {isExpanded && (
-                  <div
-                    dir={item.language === "ar" ? "rtl" : "ltr"}
-                    lang={item.language}
-                    className="mt-3 border-t border-border pt-3 text-start"
-                  >
-                    <p className="text-text">
-                      {item.structuredPayload.caption}
-                    </p>
-                    {item.structuredPayload.hashtags.length > 0 && (
-                      <p className="mt-2 text-sm text-text-muted">
-                        {item.structuredPayload.hashtags
-                          .map((tag) => `#${tag.replace(/^#/, "")}`)
-                          .join(" ")}
-                      </p>
+                  <div className="mt-3 border-t border-border pt-3">
+                    {item.platformTargets.length > 0 ? (
+                      <div className="flex flex-wrap gap-6">
+                        {item.platformTargets.map((platform) => (
+                          <PlatformPreview
+                            key={platform}
+                            platform={platform}
+                            brandName={brandName}
+                            content={item.structuredPayload}
+                            language={item.language}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        dir={item.language === "ar" ? "rtl" : "ltr"}
+                        lang={item.language}
+                        className="text-start"
+                      >
+                        <p className="text-text">
+                          {item.structuredPayload.caption}
+                        </p>
+                      </div>
                     )}
 
                     <div className="mt-4 flex gap-2">
