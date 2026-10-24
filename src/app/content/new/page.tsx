@@ -11,6 +11,7 @@ import {
   type GenerateContentOutput,
 } from "@/lib/ai/generate";
 import type { ContentType, Language } from "@/lib/ai/types";
+import { createDraftContentItem } from "@/lib/content/data";
 
 const CONTENT_TYPES: ContentType[] = [
   "post",
@@ -29,8 +30,10 @@ export default function NewContentPage() {
   const [language, setLanguage] = useState<Language>("en");
   const [topic, setTopic] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateContentOutput | null>(null);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -48,6 +51,7 @@ export default function NewContentPage() {
     if (!orgId) return;
     setError(null);
     setResult(null);
+    setSaved(false);
     setSubmitting(true);
     try {
       const output = await generateContent({
@@ -62,6 +66,25 @@ export default function NewContentPage() {
       setError(err instanceof Error ? err.message : "Generation failed.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleSaveDraft() {
+    if (!orgId || !user || !result) return;
+    setError(null);
+    setSaving(true);
+    try {
+      await createDraftContentItem(orgId, PRIMARY_BRAND_ID, user.uid, {
+        type: contentType,
+        language,
+        topic,
+        structuredPayload: result.structured,
+      });
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save draft.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -123,10 +146,27 @@ export default function NewContentPage() {
       </form>
 
       {result && (
-        <GeneratedContentPreview
-          content={result.structured}
-          language={language}
-        />
+        <>
+          <GeneratedContentPreview
+            content={result.structured}
+            language={language}
+          />
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={saving || saved}
+              className="rounded-md border border-border px-4 py-2 text-sm text-text hover:bg-surface disabled:opacity-60"
+            >
+              {saved ? "Saved" : saving ? "Saving…" : "Save as draft"}
+            </button>
+            {saved && (
+              <a href="/content" className="text-sm text-accent underline">
+                View in Content
+              </a>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
