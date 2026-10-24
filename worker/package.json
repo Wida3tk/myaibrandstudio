@@ -1,0 +1,27 @@
+{
+  "name": "myaibrandstudio-ai-gateway-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "jose": "^6.2.13",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261024.1",
+    "eslint": "^10.13.0",
+    "typescript": "^5",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^4.1.12",
+    "wrangler": "^4.152.0"
+  }
+}

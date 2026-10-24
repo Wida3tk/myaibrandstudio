@@ -1,0 +1,13 @@
+name = "myaibrandstudio-ai-gateway"
+main = "src/index.ts"
+compatibility_date = "2026-10-24"
+
+[vars]
+FIREBASE_PROJECT_ID = "myaibrandstudio-dev"
+ALLOWED_ORIGIN = "http://localhost:3000"
+
+# Secrets (never in this file — set via `wrangler secret put <NAME>`):
+#   GCP_SERVICE_ACCOUNT_JSON  — the full JSON key of a Firestore-scoped service account
+#   GROQ_API_KEY
+#   MISTRAL_API_KEY
+#   OPENROUTER_API_KEY

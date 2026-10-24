@@ -4,9 +4,9 @@ AI-powered social media content operating system — brand memory, bilingual (Ar
 generation, editorial workflow, analytics, and a provider-agnostic AI gateway. Architected to grow into
 a multi-tenant SaaS product.
 
-**Status: planning only.** Phase 0 (repository audit) and Phase 1 (architecture plan) are complete and
-documented below. Nothing has been installed, deployed, or implemented yet — see
-[`docs/00-phase0-audit.md`](docs/00-phase0-audit.md) for what "nothing" means precisely.
+**Status: M0–M2 built and verified against real infrastructure** (Firebase projects + a Cloudflare
+Workers AI gateway, see below). See [docs/04-roadmap-acceptance-criteria.md](docs/04-roadmap-acceptance-criteria.md)
+for what's next.
 
 ## Planning documents
 
@@ -16,28 +16,37 @@ documented below. Nothing has been installed, deployed, or implemented yet — s
 4. [Phase 1 — Data Model](docs/03-data-model.md)
 5. [Phase 1 — Roadmap & Acceptance Criteria](docs/04-roadmap-acceptance-criteria.md)
 6. [Phase 2 — Tooling, Skills & MCP Recommendations](docs/05-tooling-recommendations.md)
-7. [Firebase project setup](docs/06-firebase-setup.md) — one-time steps once you're ready to create real Firebase projects
+7. [Firebase project setup](docs/06-firebase-setup.md)
+8. [Cloudflare Worker (AI gateway) setup](docs/07-cloudflare-worker-setup.md)
+
+## Project layout
+
+- `src/` — the Next.js app (Auth, brand profiles, content-generation UI)
+- `functions/` — the AI gateway as Firebase Cloud Functions (needs Blaze; dormant until that's
+  available — see `docs/01-architecture-plan.md` §8a)
+- `worker/` — the same AI gateway as a Cloudflare Worker (**the one actually deployed**, free, no
+  card needed)
 
 ## Development
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+npm run dev          # http://localhost:3000 — needs .env.local, see below
 npm run lint
 npm run typecheck
 npm test
 ```
 
-No Firebase project is wired up yet — see [docs/06-firebase-setup.md](docs/06-firebase-setup.md).
+Each of `functions/` and `worker/` is its own package with the same scripts (`npm install && npm
+test` etc. inside that directory).
 
-## Stack (decided, not yet implemented)
+Copy `.env.example` to `.env.local` and fill in your Firebase web app config
+(`docs/06-firebase-setup.md`) and the deployed Worker URL (`docs/07-cloudflare-worker-setup.md`).
 
-Next.js (TypeScript) on Firebase App Hosting / Firebase Hosting + Cloud Functions · Firebase
-Authentication · Firestore · Firebase Storage · a custom provider-agnostic AI gateway running only in
-Cloud Functions (Groq primary, Mistral/OpenRouter fallback) · GitHub Actions CI/CD across three
-separate Firebase projects (dev/staging/prod). No Vercel, no Supabase.
+## Stack
 
-## Blocking items before Phase 3 can start
-
-See the "Open items that need the user" section in `docs/00-phase0-audit.md` — GitHub remote, Firebase
-project creation/billing, confirmed brand name, and first-target social platforms.
+Next.js (TypeScript) on Firebase Hosting · Firebase Authentication · Firestore (free Spark plan) ·
+a provider-agnostic AI gateway (Groq primary, Mistral/OpenRouter fallback) running on Cloudflare
+Workers · GitHub Actions CI across all three packages. No Vercel, no Supabase, no Blaze (yet — see
+`docs/01-architecture-plan.md` §8/§8a for the free-tier sequencing and why Cloud Functions aren't
+the live deployment target).

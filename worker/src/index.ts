@@ -1,0 +1,187 @@
+import { z } from "zod";
+import { verifyFirebaseIdToken } from "./auth/verify-token.js";
+import {
+  getGoogleAccessToken,
+  type ServiceAccount,
+} from "./auth/service-account.js";
+import { createFirestoreClient } from "./firestore/client.js";
+import { generateWithFallback } from "./gateway/router.js";
+import { isWithinBudget } from "./gateway/budget.js";
+import { createGroqProvider } from "./gateway/providers/groq.js";
+import { createMistralProvider } from "./gateway/providers/mistral.js";
+import { createOpenRouterProvider } from "./gateway/providers/openrouter.js";
+import type { AIProvider } from "./gateway/types.js";
+
+export interface Env {
+  FIREBASE_PROJECT_ID: string;
+  ALLOWED_ORIGIN: string;
+  GCP_SERVICE_ACCOUNT_JSON: string;
+  GROQ_API_KEY: string;
+  MISTRAL_API_KEY: string;
+  OPENROUTER_API_KEY: string;
+}
+
+// Conservative default; per-org configurable budgets are later work (see
+// docs/03-data-model.md's providerConfigs collection), not needed to ship a working v1.
+const DAILY_TOKEN_LIMIT = 50_000;
+
+const requestSchema = z.object({
+  orgId: z.string().min(1),
+  brandId: z.string().min(1),
+  contentType: z.enum(["post", "hook", "caption", "script", "calendar-note"]),
+  language: z.enum(["ar", "en"]),
+  topic: z.string().trim().min(1).max(500),
+});
+
+function corsHeaders(allowedOrigin: string): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
+
+function json(
+  body: unknown,
+  status: number,
+  headers: Record<string, string>,
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const headers = corsHeaders(env.ALLOWED_ORIGIN);
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers });
+    }
+    if (request.method !== "POST") {
+      return json({ error: "method-not-allowed" }, 405, headers);
+    }
+
+    const authHeader = request.headers.get("Authorization");
+    const idToken = authHeader?.match(/^Bearer (.+)$/)?.[1];
+    if (!idToken) {
+      return json({ error: "unauthenticated" }, 401, headers);
+    }
+
+    let uid: string;
+    try {
+      ({ uid } = await verifyFirebaseIdToken(idToken, env.FIREBASE_PROJECT_ID));
+    } catch {
+      return json({ error: "unauthenticated" }, 401, headers);
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "invalid-json" }, 400, headers);
+    }
+
+    const parsed = requestSchema.safeParse(body);
+    if (!parsed.success) {
+      return json(
+        { error: "invalid-argument", message: parsed.error.issues[0]?.message },
+        400,
+        headers,
+      );
+    }
+    const { orgId, brandId, contentType, language, topic } = parsed.data;
+
+    const serviceAccount = JSON.parse(
+      env.GCP_SERVICE_ACCOUNT_JSON,
+    ) as ServiceAccount;
+    const accessToken = await getGoogleAccessToken(
+      serviceAccount,
+      "https://www.googleapis.com/auth/datastore",
+    );
+    const firestore = createFirestoreClient(
+      env.FIREBASE_PROJECT_ID,
+      accessToken,
+    );
+
+    const member = await firestore.getDocument(
+      `organizations/${orgId}/members/${uid}`,
+    );
+    if (!member) {
+      return json({ error: "permission-denied" }, 403, headers);
+    }
+
+    const brand = await firestore.getDocument(
+      `organizations/${orgId}/brands/${brandId}`,
+    );
+    if (!brand) {
+      return json({ error: "not-found" }, 404, headers);
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const yyyymm = today.slice(0, 7).replace("-", "");
+    const usageCollectionPath = `usage/${orgId}/${yyyymm}`;
+
+    const tokensUsedToday = await firestore.sumTokensForDate(
+      usageCollectionPath,
+      today,
+    );
+    if (
+      !isWithinBudget(
+        { tokensUsedToday },
+        { dailyTokenLimit: DAILY_TOKEN_LIMIT },
+      )
+    ) {
+      return json({ error: "resource-exhausted" }, 429, headers);
+    }
+
+    const brandDoc = brand as {
+      voice?: { tone?: string };
+      audience?: { description?: string };
+      memory?: { facts?: string[] };
+    };
+
+    const providers: AIProvider[] = [
+      createGroqProvider(env.GROQ_API_KEY),
+      createMistralProvider(env.MISTRAL_API_KEY),
+      createOpenRouterProvider(env.OPENROUTER_API_KEY),
+    ];
+
+    let result;
+    try {
+      result = await generateWithFallback(
+        {
+          orgId,
+          brandId,
+          contentType,
+          language,
+          brandVoice: brandDoc.voice?.tone ?? "",
+          brandAudience: brandDoc.audience?.description ?? "",
+          brandMemoryFacts: brandDoc.memory?.facts ?? [],
+          topic,
+        },
+        providers,
+      );
+    } catch {
+      return json({ error: "all-providers-failed" }, 502, headers);
+    }
+
+    await firestore.createDocument(usageCollectionPath, {
+      provider: result.provider,
+      model: result.model,
+      brandId,
+      contentType,
+      tokensIn: result.tokensIn,
+      tokensOut: result.tokensOut,
+      date: today,
+      createdAt: new Date().toISOString(),
+    });
+
+    return json(
+      { structured: result.structured, provider: result.provider },
+      200,
+      headers,
+    );
+  },
+} satisfies ExportedHandler<Env>;

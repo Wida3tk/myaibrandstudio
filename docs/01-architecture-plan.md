@@ -139,6 +139,30 @@ allows:
   few clicks in the console) the same day Blaze is linked, so any real spend is flagged before it
   happens rather than discovered on a bill.
 
+### 8a. Cloudflare Workers instead of Cloud Functions (no card available)
+
+Blaze requires a billing-account payment method, and the user's card wasn't accepted by Google's
+verification. Rather than exposing AI provider keys to the browser (which the brief explicitly
+rules out, and which this plan does not reconsider just because Blaze is blocked), the AI gateway
+runs on **Cloudflare Workers** instead: the Workers Free plan (100,000 requests/day) needs no card
+at all, and secrets set via `wrangler secret put` are exactly as inaccessible to the browser as
+Firebase Functions secrets would have been. See `docs/07-cloudflare-worker-setup.md` for setup.
+
+This is a deployment-target swap, not an architecture change — `worker/` reuses the exact same
+provider-agnostic gateway code (`gateway/`, copied from `functions/`, see that directory's own
+README) and the same Firestore data model and security rules. The differences are plumbing specific
+to running outside the Admin SDK:
+
+- **Firebase ID token verification** happens manually (`worker/src/auth/verify-token.ts`), the same
+  algorithm the Admin SDK uses internally, via Google's public certs and the `jose` library — no
+  Node APIs, so it runs on Workers' edge runtime.
+- **Firestore access** goes through its REST API (`worker/src/firestore/client.ts`) authenticated as
+  a Google service account (`worker/src/auth/service-account.ts`, the JWT-bearer OAuth2 flow) rather
+  than the Admin SDK, which needs Node.js and isn't available on Workers.
+
+`functions/` (the Cloud Functions implementation) is left in place, tested and working, as a ready
+alternative if Blaze ever does become available — not dead code, a dormant deployment target.
+
 ## 9. Environments
 
 Three separate Firebase projects (e.g. `myaibrandstudio-dev`, `-staging`, `-prod`), each with its own

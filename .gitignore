@@ -4,9 +4,11 @@ out/
 dist/
 build/
 functions/lib/
+.wrangler/
 .env
 .env.local
 .env.*.local
+.dev.vars
 .firebase/
 firebase-debug.log
 firestore-debug.log
