@@ -163,6 +163,17 @@ to running outside the Admin SDK:
 `functions/` (the Cloud Functions implementation) is left in place, tested and working, as a ready
 alternative if Blaze ever does become available — not dead code, a dormant deployment target.
 
+### 8b. Cloudinary instead of Firebase Storage (same reason)
+
+Firebase Storage has required Blaze for every bucket since Feb 2026 (§8) — same blocker, same
+no-card constraint. Cloudinary's free plan is confirmed via its own docs to need no card and to be
+usable in production. The app uploads directly from the browser to Cloudinary (an unsigned upload
+preset, no server/Worker involved — see `docs/09-cloudinary-setup.md`) and stores the resulting URL
+in Firestore under the `assets` collection the data model already defines. The trade-off: Cloudinary
+delivers at a public URL with no per-org file-level access control, only Firestore's own rules
+protect the _metadata_ (which org/brand an asset belongs to). Acceptable for marketing assets headed
+for public posting anyway; see the setup doc for when to revisit.
+
 ## 9. Environments
 
 Three separate Firebase projects (e.g. `myaibrandstudio-dev`, `-staging`, `-prod`), each with its own

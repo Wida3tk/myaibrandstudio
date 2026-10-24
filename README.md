@@ -19,6 +19,7 @@ a multi-tenant SaaS product.
 7. [Firebase project setup](docs/06-firebase-setup.md)
 8. [Cloudflare Worker (AI gateway) setup](docs/07-cloudflare-worker-setup.md)
 9. [Deploying the app (Hosting)](docs/08-hosting-deploy.md)
+10. [Asset library setup (Cloudinary)](docs/09-cloudinary-setup.md)
 
 ## Project layout
 
