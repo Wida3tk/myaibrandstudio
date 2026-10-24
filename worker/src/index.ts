@@ -163,7 +163,8 @@ export default {
         },
         providers,
       );
-    } catch {
+    } catch (error) {
+      console.error("generateWithFallback failed", error);
       return json({ error: "all-providers-failed" }, 502, headers);
     }
 

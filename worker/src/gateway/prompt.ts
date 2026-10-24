@@ -12,7 +12,7 @@ export function buildPrompt(req: GenerationRequest): {
   const system = [
     "You are a social media content assistant writing on behalf of a specific brand.",
     languageInstruction,
-    'Output ONLY a JSON object with this exact shape: {"hook": string, "caption": string, "hashtags": string[], "callToAction": string}',
+    'Output ONLY a JSON object with this exact shape: {"hook": string, "caption": string, "hashtags": string[], "callToAction": string}. Hashtags must be plain words with no "#" symbol — the app adds it.',
     "No markdown, no extra commentary, no code fences — raw JSON only.",
   ].join(" ");
 

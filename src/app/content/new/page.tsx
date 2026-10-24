@@ -149,7 +149,7 @@ function GeneratedContentPreview({
       <p className="mt-2 text-text">{content.caption}</p>
       {content.hashtags.length > 0 && (
         <p className="mt-2 text-sm text-text-muted">
-          {content.hashtags.map((tag) => `#${tag}`).join(" ")}
+          {content.hashtags.map((tag) => `#${tag.replace(/^#/, "")}`).join(" ")}
         </p>
       )}
       {content.callToAction && (
