@@ -28,7 +28,7 @@ const worker = (await import("./index.js")).default;
 
 const env = {
   FIREBASE_PROJECT_ID: "proj",
-  ALLOWED_ORIGIN: "http://localhost:3000",
+  ALLOWED_ORIGINS: "http://localhost:3000",
   GCP_SERVICE_ACCOUNT_JSON: JSON.stringify({
     client_email: "x@y.iam.gserviceaccount.com",
     private_key: "fake",

@@ -4,9 +4,9 @@ AI-powered social media content operating system — brand memory, bilingual (Ar
 generation, editorial workflow, analytics, and a provider-agnostic AI gateway. Architected to grow into
 a multi-tenant SaaS product.
 
-**Status: M0–M2 built and verified against real infrastructure** (Firebase projects + a Cloudflare
-Workers AI gateway, see below). See [docs/04-roadmap-acceptance-criteria.md](docs/04-roadmap-acceptance-criteria.md)
-for what's next.
+**Status: M0–M2 built, deployed and verified against real infrastructure.** Live at
+**https://myaibrandstudio-dev.web.app** (dev environment). See
+[docs/04-roadmap-acceptance-criteria.md](docs/04-roadmap-acceptance-criteria.md) for what's next.
 
 ## Planning documents
 
@@ -18,6 +18,7 @@ for what's next.
 6. [Phase 2 — Tooling, Skills & MCP Recommendations](docs/05-tooling-recommendations.md)
 7. [Firebase project setup](docs/06-firebase-setup.md)
 8. [Cloudflare Worker (AI gateway) setup](docs/07-cloudflare-worker-setup.md)
+9. [Deploying the app (Hosting)](docs/08-hosting-deploy.md)
 
 ## Project layout
 

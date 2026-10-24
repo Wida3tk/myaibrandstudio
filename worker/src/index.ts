@@ -14,7 +14,8 @@ import type { AIProvider } from "./gateway/types.js";
 
 export interface Env {
   FIREBASE_PROJECT_ID: string;
-  ALLOWED_ORIGIN: string;
+  /** Comma-separated list of allowed origins (e.g. local dev + Firebase Hosting domains). */
+  ALLOWED_ORIGINS: string;
   GCP_SERVICE_ACCOUNT_JSON: string;
   GROQ_API_KEY: string;
   MISTRAL_API_KEY: string;
@@ -33,11 +34,20 @@ const requestSchema = z.object({
   topic: z.string().trim().min(1).max(500),
 });
 
-function corsHeaders(allowedOrigin: string): Record<string, string> {
+function corsHeaders(
+  requestOrigin: string | null,
+  allowedOrigins: string,
+): Record<string, string> {
+  const allowed = allowedOrigins.split(",").map((o) => o.trim());
+  const origin =
+    requestOrigin && allowed.includes(requestOrigin)
+      ? requestOrigin
+      : allowed[0];
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
+    Vary: "Origin",
   };
 }
 
@@ -54,7 +64,10 @@ function json(
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const headers = corsHeaders(env.ALLOWED_ORIGIN);
+    const headers = corsHeaders(
+      request.headers.get("Origin"),
+      env.ALLOWED_ORIGINS,
+    );
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers });
