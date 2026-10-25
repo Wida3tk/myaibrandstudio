@@ -47,6 +47,14 @@ const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
   "calendar-note": "Calendar note",
 };
 
+const CONTENT_TYPE_LABEL_AR: Record<ContentType, string> = {
+  post: "منشور",
+  hook: "خطّاف",
+  caption: "تعليق",
+  script: "سيناريو",
+  "calendar-note": "ملاحظة تقويم",
+};
+
 const ERROR_MESSAGE_AR: Partial<Record<string, string>> = {
   "resource-exhausted":
     "انتهت ميزانية الذكاء الاصطناعي اليومية لهذا المساحة — حاول مرة أخرى غدًا.",
@@ -57,6 +65,8 @@ const ERROR_MESSAGE_AR: Partial<Record<string, string>> = {
   "invalid-argument": "الطلب غير صالح — تحقق من الحقول وحاول مرة أخرى.",
 };
 
+// Values are sent to the AI gateway as-is (English reads fine as prompt input regardless of UI
+// language) — only the displayed label is localized.
 const TONE_PRESETS = [
   "Use brand voice",
   "Professional",
@@ -66,6 +76,16 @@ const TONE_PRESETS = [
   "Luxury",
   "Minimal",
 ];
+
+const TONE_LABEL_AR: Record<string, string> = {
+  "Use brand voice": "استخدام صوت العلامة",
+  Professional: "احترافي",
+  Playful: "مرح",
+  Bold: "جريء",
+  Warm: "دافئ",
+  Luxury: "فاخر",
+  Minimal: "بسيط",
+};
 
 type Variant = {
   id: string;
@@ -240,7 +260,7 @@ export default function NewContentPage() {
               >
                 {CONTENT_TYPES.map((type) => (
                   <option key={type} value={type}>
-                    {CONTENT_TYPE_LABEL[type]}
+                    {locale === "ar" ? CONTENT_TYPE_LABEL_AR[type] : CONTENT_TYPE_LABEL[type]}
                   </option>
                 ))}
               </Select>
@@ -300,7 +320,7 @@ export default function NewContentPage() {
               <Select value={tone} onChange={(e) => setTone(e.target.value)}>
                 {TONE_PRESETS.map((preset) => (
                   <option key={preset} value={preset}>
-                    {preset}
+                    {locale === "ar" ? TONE_LABEL_AR[preset] : preset}
                   </option>
                 ))}
               </Select>
