@@ -410,7 +410,7 @@ export default function DesignPage() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <div className="grid gap-6 lg:grid-cols-[14rem_1fr_16rem]">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[14rem_1fr_16rem]">
         <Card className="h-fit">
           <CardContent className="flex flex-col gap-4">
             <FieldGroup>
@@ -491,8 +491,8 @@ export default function DesignPage() {
           </CardContent>
         </Card>
 
-        <div className="flex items-start justify-center">
-          <div className="flex flex-col items-center gap-3">
+        <div className="flex min-w-0 items-start justify-center">
+          <div className="flex min-w-0 max-w-full flex-col items-center gap-3">
             <div
               className="scrollbar-thin max-w-full overflow-auto rounded-[var(--radius-lg)] border border-border bg-surface p-4 shadow-[var(--shadow-sm)]"
               style={{ maxHeight: "70vh" }}
