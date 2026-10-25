@@ -82,6 +82,17 @@ function creativeImageRequest(
   });
 }
 
+function creativeReviseRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
+  return new Request("https://worker.example/creative/revise", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+}
+
 const validBody = {
   orgId: "org1",
   brandId: "brand1",
@@ -378,6 +389,73 @@ describe("worker fetch handler — /creative/image", () => {
       mimeType: "image/jpeg",
       provider: "cloudflare-workers-ai",
     });
+    vi.unstubAllGlobals();
+  });
+});
+
+const validReviseBody = {
+  orgId: "org1",
+  brandId: "brand1",
+  instruction: "make the headline bigger",
+  language: "en",
+  canvasWidth: 1080,
+  canvasHeight: 1080,
+  objects: [
+    { role: "headline", type: "textbox", text: "Hello", left: 0, top: 0, width: 100, height: 40 },
+  ],
+};
+
+describe("worker fetch handler — /creative/revise", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mocks.getGoogleAccessToken.mockResolvedValue("access-token");
+    mocks.sumTokensForDate.mockResolvedValue(0);
+  });
+
+  it("returns 403 when the user is not an org member", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument.mockResolvedValue(null);
+    const res = await worker.fetch(
+      creativeReviseRequest(validReviseBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 with validated ops on success", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument.mockResolvedValueOnce({ role: "owner" });
+
+    const providerResponse = {
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              ops: [{ role: "headline", action: "set", props: { fontSize: 90 } }],
+            }),
+          },
+        },
+      ],
+      usage: { prompt_tokens: 5, completion_tokens: 5 },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(new Response(JSON.stringify(providerResponse), { status: 200 })),
+    );
+
+    const res = await worker.fetch(
+      creativeReviseRequest(validReviseBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as { ops: unknown[]; provider: string };
+    expect(payload.ops).toEqual([{ role: "headline", action: "set", props: { fontSize: 90 } }]);
+    expect(payload.provider).toBe("groq");
     vi.unstubAllGlobals();
   });
 });

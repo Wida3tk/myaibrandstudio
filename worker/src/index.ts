@@ -24,6 +24,8 @@ import {
   generateBackgroundImage,
   ImageProviderUnavailableError,
 } from "./gateway/creative/image.js";
+import { reviseRequestSchema } from "./gateway/creative/revise-schema.js";
+import { createRevisionProviders } from "./gateway/creative/revise-providers.js";
 
 export interface Env {
   FIREBASE_PROJECT_ID: string;
@@ -360,6 +362,73 @@ async function handleCreativeImage(
   }
 }
 
+async function handleCreativeRevise(
+  request: Request,
+  env: Env,
+  uid: string,
+  firestore: FirestoreClient,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid-json" }, 400, headers);
+  }
+
+  const parsed = reviseRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(
+      { error: "invalid-argument", message: parsed.error.issues[0]?.message },
+      400,
+      headers,
+    );
+  }
+  const { orgId, brandId } = parsed.data;
+
+  const member = await firestore.getDocument(
+    `organizations/${orgId}/members/${uid}`,
+  );
+  if (!member) {
+    return json({ error: "permission-denied" }, 403, headers);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const yyyymm = today.slice(0, 7).replace("-", "");
+  const usageCollectionPath = `usage/${orgId}/${yyyymm}`;
+
+  const tokensUsedToday = await firestore.sumTokensForDate(
+    usageCollectionPath,
+    today,
+  );
+  if (
+    !isWithinBudget({ tokensUsedToday }, { dailyTokenLimit: DAILY_TOKEN_LIMIT })
+  ) {
+    return json({ error: "resource-exhausted" }, 429, headers);
+  }
+
+  let result;
+  try {
+    result = await generateWithFallback(parsed.data, createRevisionProviders(env));
+  } catch (error) {
+    console.error("creative revision generateWithFallback failed", error);
+    return json({ error: "all-providers-failed" }, 502, headers);
+  }
+
+  await firestore.createDocument(usageCollectionPath, {
+    provider: result.provider,
+    model: result.model,
+    brandId,
+    contentType: "creative-revise",
+    tokensIn: result.tokensIn,
+    tokensOut: result.tokensOut,
+    date: today,
+    createdAt: new Date().toISOString(),
+  });
+
+  return json({ ops: result.ops, provider: result.provider }, 200, headers);
+}
+
 async function handleInstagramPublish(
   request: Request,
   env: Env,
@@ -495,6 +564,9 @@ export default {
     }
     if (pathname === "/creative/image") {
       return handleCreativeImage(request, env, uid, firestore, headers);
+    }
+    if (pathname === "/creative/revise") {
+      return handleCreativeRevise(request, env, uid, firestore, headers);
     }
 
     return handleGenerateContent(request, env, uid, firestore, headers);
