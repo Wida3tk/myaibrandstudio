@@ -42,6 +42,12 @@ export function HeaderAuthLink() {
         Assets
       </Link>
       <Link
+        href="/design"
+        className="rounded-md border border-border px-3 py-1.5 text-sm text-text hover:bg-surface"
+      >
+        Design
+      </Link>
+      <Link
         href="/brand"
         className="rounded-md border border-border px-3 py-1.5 text-sm text-text hover:bg-surface"
       >
