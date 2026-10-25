@@ -91,7 +91,12 @@ export function TextPropertiesPanel({
         </button>
         <div className="mx-1 h-5 w-px bg-border" />
         {(["left", "center", "right"] as const).map((align) => {
-          const Icon = align === "left" ? AlignLeft : align === "center" ? AlignCenter : AlignRight;
+          const Icon =
+            align === "left"
+              ? AlignLeft
+              : align === "center"
+                ? AlignCenter
+                : AlignRight;
           return (
             <button
               key={align}
@@ -118,7 +123,9 @@ export function TextPropertiesPanel({
             })
           }
         />
-        {locale === "ar" ? "نص عربي (من اليمين لليسار)" : "Arabic text (right-to-left)"}
+        {locale === "ar"
+          ? "نص عربي (من اليمين لليسار)"
+          : "Arabic text (right-to-left)"}
       </label>
     </div>
   );

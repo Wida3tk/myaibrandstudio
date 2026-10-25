@@ -53,8 +53,10 @@ const KNOWN_CODES: GenerationErrorCode[] = [
 ];
 
 const FRIENDLY_MESSAGE: Record<GenerationErrorCode, string> = {
-  "invalid-argument": "That request wasn't valid — check the fields and try again.",
-  "permission-denied": "You don't have access to generate content for this brand.",
+  "invalid-argument":
+    "That request wasn't valid — check the fields and try again.",
+  "permission-denied":
+    "You don't have access to generate content for this brand.",
   "not-found": "This brand profile couldn't be found.",
   "resource-exhausted":
     "Today's AI generation budget for this workspace is used up — try again tomorrow, or ask an owner to raise the limit.",

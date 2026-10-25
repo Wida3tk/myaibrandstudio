@@ -19,7 +19,10 @@ export function CardHeader({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex items-start justify-between gap-4 p-5 pb-0", className)}
+      className={cn(
+        "flex items-start justify-between gap-4 p-5 pb-0",
+        className,
+      )}
       {...props}
     />
   );
@@ -41,9 +44,7 @@ export function CardDescription({
   className,
   ...props
 }: HTMLAttributes<HTMLParagraphElement>) {
-  return (
-    <p className={cn("text-sm text-text-muted", className)} {...props} />
-  );
+  return <p className={cn("text-sm text-text-muted", className)} {...props} />;
 }
 
 export function CardContent({

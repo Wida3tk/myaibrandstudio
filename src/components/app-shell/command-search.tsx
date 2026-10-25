@@ -126,7 +126,10 @@ export function CommandSearch() {
               aria-label={locale === "ar" ? "البحث" : "Search"}
             />
           </div>
-          <ul role="listbox" className="max-h-80 overflow-y-auto p-2 scrollbar-thin">
+          <ul
+            role="listbox"
+            className="max-h-80 overflow-y-auto p-2 scrollbar-thin"
+          >
             {results.length === 0 && (
               <li className="px-3 py-6 text-center text-sm text-text-muted">
                 {locale === "ar" ? "لا توجد نتائج" : "No results"}
@@ -135,19 +138,27 @@ export function CommandSearch() {
             {results.map((result, i) => {
               const Icon = result.icon;
               return (
-                <li key={result.key} role="option" aria-selected={i === highlighted}>
+                <li
+                  key={result.key}
+                  role="option"
+                  aria-selected={i === highlighted}
+                >
                   <button
                     type="button"
                     onClick={() => go(result.href)}
                     onMouseEnter={() => setHighlighted(i)}
                     className={`flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-start text-sm ${
-                      i === highlighted ? "bg-accent-soft text-accent" : "text-text"
+                      i === highlighted
+                        ? "bg-accent-soft text-accent"
+                        : "text-text"
                     }`}
                   >
                     <Icon size={16} aria-hidden="true" />
                     <span className="flex-1 truncate">{result.label}</span>
                     {result.hint && (
-                      <span className="text-xs text-text-muted">{result.hint}</span>
+                      <span className="text-xs text-text-muted">
+                        {result.hint}
+                      </span>
                     )}
                   </button>
                 </li>

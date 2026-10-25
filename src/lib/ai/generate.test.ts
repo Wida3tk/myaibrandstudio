@@ -42,9 +42,7 @@ describe("generateContent", () => {
     vi.stubEnv("NEXT_PUBLIC_AI_GATEWAY_URL", "https://gateway.example.com");
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(new Response("", { status: 500 })),
+      vi.fn().mockResolvedValue(new Response("", { status: 500 })),
     );
 
     const error = await generateContent(baseInput).catch((e) => e);
@@ -56,7 +54,15 @@ describe("generateContent", () => {
     vi.stubEnv("NEXT_PUBLIC_AI_GATEWAY_URL", "https://gateway.example.com");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
-        JSON.stringify({ structured: { hook: "h", caption: "c", hashtags: [], callToAction: "" }, provider: "groq" }),
+        JSON.stringify({
+          structured: {
+            hook: "h",
+            caption: "c",
+            hashtags: [],
+            callToAction: "",
+          },
+          provider: "groq",
+        }),
         { status: 200 },
       ),
     );

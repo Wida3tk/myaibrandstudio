@@ -30,7 +30,14 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant = "primary", size = "md", type = "button", asChild, ...props },
+    {
+      className,
+      variant = "primary",
+      size = "md",
+      type = "button",
+      asChild,
+      ...props
+    },
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";

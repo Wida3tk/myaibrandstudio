@@ -59,7 +59,10 @@ export function DropdownMenuLabel({
 }: React.ComponentProps<typeof RadixDropdown.Label>) {
   return (
     <RadixDropdown.Label
-      className={cn("px-2.5 py-1.5 text-xs font-medium text-text-muted", className)}
+      className={cn(
+        "px-2.5 py-1.5 text-xs font-medium text-text-muted",
+        className,
+      )}
       {...props}
     />
   );

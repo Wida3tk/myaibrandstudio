@@ -31,13 +31,22 @@ const STATUS_LABEL_AR: Record<ContentStatus, string> = {
   approved: "معتمد",
   published: "منشور",
 };
-const STATUS_TONE: Record<ContentStatus, "neutral" | "warning" | "success" | "accent"> = {
+const STATUS_TONE: Record<
+  ContentStatus,
+  "neutral" | "warning" | "success" | "accent"
+> = {
   draft: "neutral",
   in_review: "warning",
   approved: "success",
   published: "accent",
 };
-const FILTERS: ("all" | ContentStatus)[] = ["all", "draft", "in_review", "approved", "published"];
+const FILTERS: ("all" | ContentStatus)[] = [
+  "all",
+  "draft",
+  "in_review",
+  "approved",
+  "published",
+];
 
 export default function ContentListPage() {
   const { user } = useAuth();
@@ -49,7 +58,9 @@ export default function ContentListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | ContentStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | ContentStatus>(
+    "all",
+  );
   const [view, setView] = useState<"card" | "list">("card");
   const [openItemId, setOpenItemId] = useState<string | null>(null);
 
@@ -67,7 +78,10 @@ export default function ContentListPage() {
         setItems(contentItems);
         setImageAssets(assets.filter((a) => a.kind === "image"));
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load content.");
+        if (!cancelled)
+          setError(
+            err instanceof Error ? err.message : "Failed to load content.",
+          );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -110,7 +124,10 @@ export default function ContentListPage() {
   }
 
   return (
-    <div dir={locale === "ar" ? "rtl" : "ltr"} className="flex flex-col gap-6 text-start">
+    <div
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      className="flex flex-col gap-6 text-start"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-text">
@@ -121,7 +138,9 @@ export default function ContentListPage() {
           </p>
         </div>
         <Button asChild size="sm">
-          <Link href="/content/new">{locale === "ar" ? "إنشاء محتوى" : "Generate content"}</Link>
+          <Link href="/content/new">
+            {locale === "ar" ? "إنشاء محتوى" : "Generate content"}
+          </Link>
         </Button>
       </div>
 
@@ -129,7 +148,11 @@ export default function ContentListPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative max-w-xs flex-1">
-          <SearchIcon size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden="true" />
+          <SearchIcon
+            size={16}
+            className="absolute start-3 top-1/2 -translate-y-1/2 text-text-muted"
+            aria-hidden="true"
+          />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -151,8 +174,12 @@ export default function ContentListPage() {
               style={{ transitionDuration: "var(--duration-fast)" }}
             >
               {f === "all"
-                ? locale === "ar" ? "الكل" : "All"
-                : locale === "ar" ? STATUS_LABEL_AR[f] : STATUS_LABEL_EN[f]}
+                ? locale === "ar"
+                  ? "الكل"
+                  : "All"
+                : locale === "ar"
+                  ? STATUS_LABEL_AR[f]
+                  : STATUS_LABEL_EN[f]}
             </button>
           ))}
         </div>
@@ -185,8 +212,12 @@ export default function ContentListPage() {
               icon={<Sparkles size={20} />}
               title={
                 items.length === 0
-                  ? locale === "ar" ? "لا يوجد محتوى بعد" : "No content yet"
-                  : locale === "ar" ? "لا توجد نتائج" : "No matches"
+                  ? locale === "ar"
+                    ? "لا يوجد محتوى بعد"
+                    : "No content yet"
+                  : locale === "ar"
+                    ? "لا توجد نتائج"
+                    : "No matches"
               }
               description={
                 items.length === 0
@@ -200,7 +231,9 @@ export default function ContentListPage() {
               action={
                 items.length === 0 ? (
                   <Button asChild size="sm">
-                    <Link href="/content/new">{locale === "ar" ? "إنشاء محتوى" : "Generate content"}</Link>
+                    <Link href="/content/new">
+                      {locale === "ar" ? "إنشاء محتوى" : "Generate content"}
+                    </Link>
                   </Button>
                 ) : undefined
               }
@@ -216,22 +249,35 @@ export default function ContentListPage() {
               onClick={() => setOpenItemId(item.id)}
               className="text-start"
             >
-              <Card className="h-full transition-shadow hover:shadow-[var(--shadow-md)]" style={{ transitionDuration: "var(--duration-base)" }}>
+              <Card
+                className="h-full transition-shadow hover:shadow-[var(--shadow-md)]"
+                style={{ transitionDuration: "var(--duration-base)" }}
+              >
                 {item.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element -- static export
-                  <img src={item.imageUrl} alt="" className="h-32 w-full rounded-t-[var(--radius-lg)] object-cover" />
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="h-32 w-full rounded-t-[var(--radius-lg)] object-cover"
+                  />
                 )}
                 <CardContent className="flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <Badge tone={STATUS_TONE[item.status]}>
-                      {locale === "ar" ? STATUS_LABEL_AR[item.status] : STATUS_LABEL_EN[item.status]}
+                      {locale === "ar"
+                        ? STATUS_LABEL_AR[item.status]
+                        : STATUS_LABEL_EN[item.status]}
                     </Badge>
-                    <span className="text-xs text-text-muted">{item.platformTargets.length}</span>
+                    <span className="text-xs text-text-muted">
+                      {item.platformTargets.length}
+                    </span>
                   </div>
                   <p className="line-clamp-2 font-medium text-text">
                     {item.structuredPayload.hook || item.topic}
                   </p>
-                  <p className="line-clamp-2 text-sm text-text-muted">{item.structuredPayload.caption}</p>
+                  <p className="line-clamp-2 text-sm text-text-muted">
+                    {item.structuredPayload.caption}
+                  </p>
                 </CardContent>
               </Card>
             </button>
@@ -249,7 +295,11 @@ export default function ContentListPage() {
                 >
                   {item.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- static export
-                    <img src={item.imageUrl} alt="" className="h-10 w-10 shrink-0 rounded-[var(--radius-sm)] object-cover" />
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-[var(--radius-sm)] object-cover"
+                    />
                   ) : (
                     <div className="h-10 w-10 shrink-0 rounded-[var(--radius-sm)] bg-accent-soft" />
                   )}
@@ -257,10 +307,14 @@ export default function ContentListPage() {
                     <p className="truncate font-medium text-text">
                       {item.structuredPayload.hook || item.topic}
                     </p>
-                    <p className="truncate text-xs text-text-muted">{item.topic}</p>
+                    <p className="truncate text-xs text-text-muted">
+                      {item.topic}
+                    </p>
                   </div>
                   <Badge tone={STATUS_TONE[item.status]} className="shrink-0">
-                    {locale === "ar" ? STATUS_LABEL_AR[item.status] : STATUS_LABEL_EN[item.status]}
+                    {locale === "ar"
+                      ? STATUS_LABEL_AR[item.status]
+                      : STATUS_LABEL_EN[item.status]}
                   </Badge>
                 </button>
               </li>

@@ -8,12 +8,19 @@ import { useLocale } from "@/components/locale-provider";
 import { PRIMARY_BRAND_ID } from "@/lib/brand/schema";
 import { listContentItems, transitionContentItem } from "@/lib/content/data";
 import { listAssets } from "@/lib/assets/data";
-import { createCalendarEntry, deleteCalendarEntry, listCalendarEntries } from "@/lib/calendar/data";
+import {
+  createCalendarEntry,
+  deleteCalendarEntry,
+  listCalendarEntries,
+} from "@/lib/calendar/data";
 import { getMonthGridDays, getWeekDays, toDateKey } from "@/lib/calendar/grid";
 import type { ContentItem } from "@/lib/content/schema";
 import type { CalendarEntry } from "@/lib/calendar/schema";
 import type { Asset } from "@/lib/assets/schema";
-import { PLATFORM_LABEL, PlatformPreview } from "@/components/platform-previews";
+import {
+  PLATFORM_LABEL,
+  PlatformPreview,
+} from "@/components/platform-previews";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +31,15 @@ import { ContentDetailDialog } from "@/components/content/content-detail-dialog"
 import { ScheduleDialog } from "@/components/calendar/schedule-dialog";
 
 const WEEKDAY_LABELS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const WEEKDAY_LABELS_AR = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+const WEEKDAY_LABELS_AR = [
+  "أحد",
+  "اثنين",
+  "ثلاثاء",
+  "أربعاء",
+  "خميس",
+  "جمعة",
+  "سبت",
+];
 
 export default function CalendarPage() {
   const { user } = useAuth();
@@ -59,7 +74,10 @@ export default function CalendarPage() {
         setEntries(calendarEntries);
         setImageAssets(assets.filter((a) => a.kind === "image"));
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load calendar.");
+        if (!cancelled)
+          setError(
+            err instanceof Error ? err.message : "Failed to load calendar.",
+          );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -69,7 +87,10 @@ export default function CalendarPage() {
     };
   }, [orgId]);
 
-  const itemsById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const itemsById = useMemo(
+    () => new Map(items.map((i) => [i.id, i])),
+    [items],
+  );
   const entriesByDate = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>();
     for (const entry of entries) {
@@ -80,7 +101,10 @@ export default function CalendarPage() {
     return map;
   }, [entries]);
 
-  const days = calView === "week" ? getWeekDays(anchor) : getMonthGridDays(anchor.getFullYear(), anchor.getMonth());
+  const days =
+    calView === "week"
+      ? getWeekDays(anchor)
+      : getMonthGridDays(anchor.getFullYear(), anchor.getMonth());
   const todayKey = toDateKey(new Date());
   const weekdayLabels = locale === "ar" ? WEEKDAY_LABELS_AR : WEEKDAY_LABELS_EN;
 
@@ -93,14 +117,26 @@ export default function CalendarPage() {
     });
   }
 
-  async function handleScheduleSave(contentItemId: string, platform: import("@/lib/content/schema").Platform) {
+  async function handleScheduleSave(
+    contentItemId: string,
+    platform: import("@/lib/content/schema").Platform,
+  ) {
     if (!orgId || !scheduleDate) return;
     const id = await createCalendarEntry(orgId, PRIMARY_BRAND_ID, {
       contentItemId,
       platform,
       scheduledFor: toDateKey(scheduleDate),
     });
-    setEntries((prev) => [...prev, { id, contentItemId, platform, scheduledFor: toDateKey(scheduleDate), publishStatus: "scheduled" }]);
+    setEntries((prev) => [
+      ...prev,
+      {
+        id,
+        contentItemId,
+        platform,
+        scheduledFor: toDateKey(scheduleDate),
+        publishStatus: "scheduled",
+      },
+    ]);
   }
 
   async function handleUnschedule(entryId: string) {
@@ -109,18 +145,38 @@ export default function CalendarPage() {
     setEntries((prev) => prev.filter((e) => e.id !== entryId));
   }
 
-  async function handleApprove(item: ContentItem, toStatus: "in_review" | "approved" | "draft", action: string) {
+  async function handleApprove(
+    item: ContentItem,
+    toStatus: "in_review" | "approved" | "draft",
+    action: string,
+  ) {
     if (!orgId || !user) return;
     setBusyApprovalId(item.id);
     try {
-      await transitionContentItem(orgId, PRIMARY_BRAND_ID, item, toStatus, user.uid, action);
+      await transitionContentItem(
+        orgId,
+        PRIMARY_BRAND_ID,
+        item,
+        toStatus,
+        user.uid,
+        action,
+      );
       setItems((prev) =>
         prev.map((i) =>
           i.id === item.id
             ? {
                 ...i,
                 status: toStatus,
-                history: [...i.history, { uid: user.uid, action, fromStatus: item.status, toStatus, at: new Date().toISOString() }],
+                history: [
+                  ...i.history,
+                  {
+                    uid: user.uid,
+                    action,
+                    fromStatus: item.status,
+                    toStatus,
+                    at: new Date().toISOString(),
+                  },
+                ],
               }
             : i,
         ),
@@ -148,7 +204,10 @@ export default function CalendarPage() {
   }
 
   return (
-    <div dir={locale === "ar" ? "rtl" : "ltr"} className="flex flex-col gap-6 text-start">
+    <div
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      className="flex flex-col gap-6 text-start"
+    >
       <div>
         <h1 className="text-2xl font-semibold text-text">
           {locale === "ar" ? "التقويم والموافقات" : "Calendar & Approvals"}
@@ -164,11 +223,15 @@ export default function CalendarPage() {
 
       <Tabs defaultValue="calendar">
         <TabsList>
-          <TabsTrigger value="calendar">{locale === "ar" ? "التقويم" : "Calendar"}</TabsTrigger>
+          <TabsTrigger value="calendar">
+            {locale === "ar" ? "التقويم" : "Calendar"}
+          </TabsTrigger>
           <TabsTrigger value="approvals">
             {locale === "ar" ? "الموافقات" : "Approvals"}
             {pendingApproval.length > 0 && (
-              <Badge tone="warning" className="ms-1.5">{pendingApproval.length}</Badge>
+              <Badge tone="warning" className="ms-1.5">
+                {pendingApproval.length}
+              </Badge>
             )}
           </TabsTrigger>
         </TabsList>
@@ -176,16 +239,36 @@ export default function CalendarPage() {
         <TabsContent value="calendar" className="mt-4">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" size="icon" onClick={() => stepAnchor(-1)} aria-label="Previous">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => stepAnchor(-1)}
+                aria-label="Previous"
+              >
                 <ChevronLeft size={16} className="rtl:rotate-180" />
               </Button>
               <span className="min-w-36 text-center font-medium text-text">
-                {anchor.toLocaleDateString(locale === "ar" ? "ar" : "en-US", { month: "long", year: "numeric" })}
+                {anchor.toLocaleDateString(locale === "ar" ? "ar" : "en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
               </span>
-              <Button type="button" variant="ghost" size="icon" onClick={() => stepAnchor(1)} aria-label="Next">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => stepAnchor(1)}
+                aria-label="Next"
+              >
                 <ChevronRight size={16} className="rtl:rotate-180" />
               </Button>
-              <Button type="button" variant="secondary" size="sm" onClick={() => setAnchor(new Date())}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setAnchor(new Date())}
+              >
                 {locale === "ar" ? "اليوم" : "Today"}
               </Button>
             </div>
@@ -196,14 +279,22 @@ export default function CalendarPage() {
                   type="button"
                   onClick={() => setCalView(v)}
                   className={`rounded-[var(--radius-full)] border px-3 py-1 text-sm ${
-                    calView === v ? "border-accent bg-accent-soft text-accent" : "border-border text-text-muted"
+                    calView === v
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "border-border text-text-muted"
                   }`}
                 >
                   {v === "month"
-                    ? locale === "ar" ? "شهر" : "Month"
+                    ? locale === "ar"
+                      ? "شهر"
+                      : "Month"
                     : v === "week"
-                      ? locale === "ar" ? "أسبوع" : "Week"
-                      : locale === "ar" ? "قائمة" : "List"}
+                      ? locale === "ar"
+                        ? "أسبوع"
+                        : "Week"
+                      : locale === "ar"
+                        ? "قائمة"
+                        : "List"}
                 </button>
               ))}
             </div>
@@ -213,7 +304,13 @@ export default function CalendarPage() {
             entries.length === 0 ? (
               <Card>
                 <CardContent>
-                  <EmptyState title={locale === "ar" ? "لا يوجد محتوى مجدول" : "Nothing scheduled"} />
+                  <EmptyState
+                    title={
+                      locale === "ar"
+                        ? "لا يوجد محتوى مجدول"
+                        : "Nothing scheduled"
+                    }
+                  />
                 </CardContent>
               </Card>
             ) : (
@@ -223,25 +320,40 @@ export default function CalendarPage() {
                     const item = itemsById.get(entry.contentItemId);
                     const published = Boolean(item?.publishes[entry.platform]);
                     return (
-                      <li key={entry.id} className="flex items-center gap-3 px-5 py-3">
-                        <span className="w-24 shrink-0 text-sm text-text-muted">{entry.scheduledFor}</span>
+                      <li
+                        key={entry.id}
+                        className="flex items-center gap-3 px-5 py-3"
+                      >
+                        <span className="w-24 shrink-0 text-sm text-text-muted">
+                          {entry.scheduledFor}
+                        </span>
                         <button
                           type="button"
                           onClick={() => item && setOpenItemId(item.id)}
                           className="flex-1 truncate text-start text-sm font-medium text-text hover:underline"
                         >
-                          {item?.structuredPayload.hook || item?.topic || entry.contentItemId}
+                          {item?.structuredPayload.hook ||
+                            item?.topic ||
+                            entry.contentItemId}
                         </button>
-                        <Badge tone="neutral">{PLATFORM_LABEL[entry.platform]}</Badge>
+                        <Badge tone="neutral">
+                          {PLATFORM_LABEL[entry.platform]}
+                        </Badge>
                         <Badge tone={published ? "success" : "accent"}>
                           {published
-                            ? locale === "ar" ? "منشور" : "Published"
-                            : locale === "ar" ? "مجدول" : "Scheduled"}
+                            ? locale === "ar"
+                              ? "منشور"
+                              : "Published"
+                            : locale === "ar"
+                              ? "مجدول"
+                              : "Scheduled"}
                         </Badge>
                         <button
                           type="button"
                           onClick={() => handleUnschedule(entry.id)}
-                          aria-label={locale === "ar" ? "إلغاء الجدولة" : "Unschedule"}
+                          aria-label={
+                            locale === "ar" ? "إلغاء الجدولة" : "Unschedule"
+                          }
                           className="text-text-muted hover:text-danger"
                         >
                           <X size={14} />
@@ -256,14 +368,18 @@ export default function CalendarPage() {
             <div className="overflow-x-auto">
               <div className="grid min-w-[42rem] grid-cols-7 gap-px rounded-[var(--radius-lg)] border border-border bg-border">
                 {weekdayLabels.map((label) => (
-                  <div key={label} className="bg-surface-raised px-2 py-1.5 text-center text-xs font-medium text-text-muted">
+                  <div
+                    key={label}
+                    className="bg-surface-raised px-2 py-1.5 text-center text-xs font-medium text-text-muted"
+                  >
                     {label}
                   </div>
                 ))}
                 {days.map((day) => {
                   const key = toDateKey(day);
                   const dayEntries = entriesByDate.get(key) ?? [];
-                  const inMonth = calView === "week" || day.getMonth() === anchor.getMonth();
+                  const inMonth =
+                    calView === "week" || day.getMonth() === anchor.getMonth();
                   const isToday = key === todayKey;
                   return (
                     <div
@@ -271,13 +387,17 @@ export default function CalendarPage() {
                       className={`flex min-h-24 flex-col gap-1 bg-surface p-1.5 ${inMonth ? "" : "opacity-40"}`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${isToday ? "bg-accent text-accent-contrast" : "text-text-muted"}`}>
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${isToday ? "bg-accent text-accent-contrast" : "text-text-muted"}`}
+                        >
                           {day.getDate()}
                         </span>
                         <button
                           type="button"
                           onClick={() => setScheduleDate(day)}
-                          aria-label={locale === "ar" ? "جدولة محتوى" : "Schedule content"}
+                          aria-label={
+                            locale === "ar" ? "جدولة محتوى" : "Schedule content"
+                          }
                           className="text-text-muted hover:text-accent"
                         >
                           <Plus size={14} />
@@ -286,14 +406,18 @@ export default function CalendarPage() {
                       <div className="flex flex-col gap-1">
                         {dayEntries.map((entry) => {
                           const item = itemsById.get(entry.contentItemId);
-                          const published = Boolean(item?.publishes[entry.platform]);
+                          const published = Boolean(
+                            item?.publishes[entry.platform],
+                          );
                           return (
                             <button
                               key={entry.id}
                               type="button"
                               onClick={() => item && setOpenItemId(item.id)}
                               className={`truncate rounded-[var(--radius-sm)] px-1.5 py-0.5 text-start text-xs ${
-                                published ? "bg-success-soft text-success" : "bg-accent-soft text-accent"
+                                published
+                                  ? "bg-success-soft text-success"
+                                  : "bg-accent-soft text-accent"
                               }`}
                               title={item?.structuredPayload.hook}
                             >
@@ -315,7 +439,11 @@ export default function CalendarPage() {
             <Card>
               <CardContent>
                 <EmptyState
-                  title={locale === "ar" ? "لا شيء ينتظر الموافقة" : "Nothing waiting for approval"}
+                  title={
+                    locale === "ar"
+                      ? "لا شيء ينتظر الموافقة"
+                      : "Nothing waiting for approval"
+                  }
                   description={
                     locale === "ar"
                       ? "عندما يُرسل محتوى للمراجعة سيظهر هنا."
@@ -331,17 +459,27 @@ export default function CalendarPage() {
                   <CardContent className="flex flex-col gap-4 md:flex-row md:items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <Badge tone="warning">{locale === "ar" ? "قيد المراجعة" : "In review"}</Badge>
-                        <span className="text-xs text-text-muted">{item.topic}</span>
+                        <Badge tone="warning">
+                          {locale === "ar" ? "قيد المراجعة" : "In review"}
+                        </Badge>
+                        <span className="text-xs text-text-muted">
+                          {item.topic}
+                        </span>
                       </div>
-                      <p className="mt-2 font-medium text-text">{item.structuredPayload.hook}</p>
-                      <p className="mt-1 text-sm text-text-muted">{item.structuredPayload.caption}</p>
+                      <p className="mt-2 font-medium text-text">
+                        {item.structuredPayload.hook}
+                      </p>
+                      <p className="mt-1 text-sm text-text-muted">
+                        {item.structuredPayload.caption}
+                      </p>
                       <div className="mt-3 flex gap-2">
                         <Button
                           type="button"
                           size="sm"
                           disabled={busyApprovalId === item.id}
-                          onClick={() => handleApprove(item, "approved", "approved")}
+                          onClick={() =>
+                            handleApprove(item, "approved", "approved")
+                          }
                         >
                           {locale === "ar" ? "اعتماد" : "Approve"}
                         </Button>
@@ -350,11 +488,18 @@ export default function CalendarPage() {
                           variant="secondary"
                           size="sm"
                           disabled={busyApprovalId === item.id}
-                          onClick={() => handleApprove(item, "draft", "changes_requested")}
+                          onClick={() =>
+                            handleApprove(item, "draft", "changes_requested")
+                          }
                         >
                           {locale === "ar" ? "طلب تعديلات" : "Request changes"}
                         </Button>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => setOpenItemId(item.id)}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setOpenItemId(item.id)}
+                        >
                           {locale === "ar" ? "عرض التفاصيل" : "View details"}
                         </Button>
                       </div>

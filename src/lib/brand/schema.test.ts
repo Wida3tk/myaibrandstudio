@@ -40,7 +40,10 @@ describe("brandProfileSchema", () => {
   });
 
   it("rejects a malformed primaryColor", () => {
-    const result = brandProfileSchema.safeParse({ name: "Acme", primaryColor: "violet" });
+    const result = brandProfileSchema.safeParse({
+      name: "Acme",
+      primaryColor: "violet",
+    });
     expect(result.success).toBe(false);
   });
 });

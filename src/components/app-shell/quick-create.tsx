@@ -8,9 +8,30 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 
 const ACTIONS = [
-  { href: "/content/new", icon: FileText, labelEn: "AI content", labelAr: "محتوى بالذكاء الاصطناعي", descEn: "Generate a new post, hook or caption", descAr: "إنشاء منشور أو خطّاف أو تعليق جديد" },
-  { href: "/design", icon: Palette, labelEn: "Design", labelAr: "تصميم", descEn: "Start a new visual in the design studio", descAr: "ابدأ تصميمًا جديدًا في استوديو التصميم" },
-  { href: "/assets", icon: ImageIcon, labelEn: "Upload asset", labelAr: "رفع أصل", descEn: "Add an image or video to your library", descAr: "أضف صورة أو فيديو إلى مكتبتك" },
+  {
+    href: "/content/new",
+    icon: FileText,
+    labelEn: "AI content",
+    labelAr: "محتوى بالذكاء الاصطناعي",
+    descEn: "Generate a new post, hook or caption",
+    descAr: "إنشاء منشور أو خطّاف أو تعليق جديد",
+  },
+  {
+    href: "/design",
+    icon: Palette,
+    labelEn: "Design",
+    labelAr: "تصميم",
+    descEn: "Start a new visual in the design studio",
+    descAr: "ابدأ تصميمًا جديدًا في استوديو التصميم",
+  },
+  {
+    href: "/assets",
+    icon: ImageIcon,
+    labelEn: "Upload asset",
+    labelAr: "رفع أصل",
+    descEn: "Add an image or video to your library",
+    descAr: "أضف صورة أو فيديو إلى مكتبتك",
+  },
 ];
 
 export function QuickCreate() {
@@ -26,7 +47,9 @@ export function QuickCreate() {
         </Button>
       </DialogTrigger>
       <DialogContent
-        title={locale === "ar" ? "ماذا تريد إنشاءه؟" : "What do you want to create?"}
+        title={
+          locale === "ar" ? "ماذا تريد إنشاءه؟" : "What do you want to create?"
+        }
       >
         <div className="flex flex-col gap-2">
           {ACTIONS.map((action) => {

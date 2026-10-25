@@ -23,11 +23,13 @@ export function buildPrompt(req: GenerationRequest): {
     req.audienceOverride && `Audience for this piece: ${req.audienceOverride}`,
     req.brandMemoryFacts.length > 0 &&
       `Brand rules (must follow): ${req.brandMemoryFacts.join("; ")}`,
-    req.pillars && req.pillars.length > 0 &&
+    req.pillars &&
+      req.pillars.length > 0 &&
       `Content pillars to draw from: ${req.pillars.join(", ")}`,
     `Content type requested: ${req.contentType}`,
     `Topic: ${req.topic}`,
-    req.customInstructions && `Additional instructions (must follow): ${req.customInstructions}`,
+    req.customInstructions &&
+      `Additional instructions (must follow): ${req.customInstructions}`,
   ]
     .filter(Boolean)
     .join("\n");

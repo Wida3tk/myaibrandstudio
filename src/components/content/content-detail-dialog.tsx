@@ -32,7 +32,10 @@ const STATUS_LABEL_AR: Record<ContentStatus, string> = {
   approved: "معتمد",
   published: "منشور",
 };
-const STATUS_TONE: Record<ContentStatus, "neutral" | "warning" | "success" | "accent"> = {
+const STATUS_TONE: Record<
+  ContentStatus,
+  "neutral" | "warning" | "success" | "accent"
+> = {
   draft: "neutral",
   in_review: "warning",
   approved: "success",
@@ -57,7 +60,9 @@ export function ContentDetailDialog({
   onChanged: (updated: ContentItem) => void;
 }) {
   const { locale } = useLocale();
-  const [content, setContent] = useState<GeneratedContent>(item.structuredPayload);
+  const [content, setContent] = useState<GeneratedContent>(
+    item.structuredPayload,
+  );
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -87,13 +92,26 @@ export function ContentDetailDialog({
     setError(null);
     setBusy(true);
     try {
-      await transitionContentItem(orgId, PRIMARY_BRAND_ID, item, toStatus, uid, action);
+      await transitionContentItem(
+        orgId,
+        PRIMARY_BRAND_ID,
+        item,
+        toStatus,
+        uid,
+        action,
+      );
       onChanged({
         ...item,
         status: toStatus,
         history: [
           ...item.history,
-          { uid, action, fromStatus: item.status, toStatus, at: new Date().toISOString() },
+          {
+            uid,
+            action,
+            fromStatus: item.status,
+            toStatus,
+            at: new Date().toISOString(),
+          },
         ],
       });
     } catch (err) {
@@ -160,7 +178,9 @@ export function ContentDetailDialog({
       >
         <div className="flex items-center gap-2">
           <Badge tone={STATUS_TONE[item.status]}>
-            {locale === "ar" ? STATUS_LABEL_AR[item.status] : STATUS_LABEL_EN[item.status]}
+            {locale === "ar"
+              ? STATUS_LABEL_AR[item.status]
+              : STATUS_LABEL_EN[item.status]}
           </Badge>
           <span className="text-xs text-text-muted">{item.topic}</span>
         </div>
@@ -171,7 +191,10 @@ export function ContentDetailDialog({
           <div className="flex flex-col gap-3">
             <FieldGroup>
               <Label>{locale === "ar" ? "الخطّاف" : "Hook"}</Label>
-              <Input value={content.hook} onChange={(e) => patch({ hook: e.target.value })} />
+              <Input
+                value={content.hook}
+                onChange={(e) => patch({ hook: e.target.value })}
+              />
             </FieldGroup>
             <FieldGroup>
               <Label>{locale === "ar" ? "التعليق" : "Caption"}</Label>
@@ -196,7 +219,9 @@ export function ContentDetailDialog({
               />
             </FieldGroup>
             <FieldGroup>
-              <Label>{locale === "ar" ? "دعوة لاتخاذ إجراء" : "Call to action"}</Label>
+              <Label>
+                {locale === "ar" ? "دعوة لاتخاذ إجراء" : "Call to action"}
+              </Label>
               <Input
                 value={content.callToAction}
                 onChange={(e) => patch({ callToAction: e.target.value })}
@@ -204,10 +229,19 @@ export function ContentDetailDialog({
             </FieldGroup>
 
             <div className="flex items-center gap-2">
-              <Button type="button" size="sm" onClick={handleSaveEdits} disabled={!dirty || saving}>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveEdits}
+                disabled={!dirty || saving}
+              >
                 {saving
-                  ? locale === "ar" ? "جارٍ الحفظ..." : "Saving..."
-                  : locale === "ar" ? "حفظ التعديلات" : "Save edits"}
+                  ? locale === "ar"
+                    ? "جارٍ الحفظ..."
+                    : "Saving..."
+                  : locale === "ar"
+                    ? "حفظ التعديلات"
+                    : "Save edits"}
               </Button>
               {!dirty && (
                 <span className="flex items-center gap-1 text-xs text-text-muted">
@@ -221,13 +255,22 @@ export function ContentDetailDialog({
               <div className="mt-2 flex items-center gap-3">
                 {item.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- static export
-                  <img src={item.imageUrl} alt="" className="h-16 w-16 rounded-[var(--radius-sm)] border border-border object-cover" />
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="h-16 w-16 rounded-[var(--radius-sm)] border border-border object-cover"
+                  />
                 ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border text-text-muted">
                     <ImageIcon size={18} />
                   </div>
                 )}
-                <Button type="button" variant="secondary" size="sm" onClick={() => setPickingImage((s) => !s)}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPickingImage((s) => !s)}
+                >
                   {locale === "ar" ? "اختيار صورة" : "Choose image"}
                 </Button>
               </div>
@@ -235,7 +278,9 @@ export function ContentDetailDialog({
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {imageAssets.length === 0 ? (
                     <p className="text-xs text-text-muted">
-                      {locale === "ar" ? "لا توجد صور في مكتبة الأصول." : "No images in your Asset Library."}
+                      {locale === "ar"
+                        ? "لا توجد صور في مكتبة الأصول."
+                        : "No images in your Asset Library."}
                     </p>
                   ) : (
                     imageAssets.map((asset) => (
@@ -247,7 +292,11 @@ export function ContentDetailDialog({
                         className="h-12 w-12 overflow-hidden rounded-[var(--radius-sm)] border border-border hover:border-accent"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
-                        <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                        <img
+                          src={asset.url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       </button>
                     ))
                   )}
@@ -261,11 +310,20 @@ export function ContentDetailDialog({
                   type="button"
                   size="sm"
                   disabled={busy}
-                  onClick={() => handleTransition(forward, forward === "approved" ? "approved" : "submitted")}
+                  onClick={() =>
+                    handleTransition(
+                      forward,
+                      forward === "approved" ? "approved" : "submitted",
+                    )
+                  }
                 >
                   {forward === "in_review"
-                    ? locale === "ar" ? "إرسال للمراجعة" : "Submit for review"
-                    : locale === "ar" ? "اعتماد" : "Approve"}
+                    ? locale === "ar"
+                      ? "إرسال للمراجعة"
+                      : "Submit for review"
+                    : locale === "ar"
+                      ? "اعتماد"
+                      : "Approve"}
                 </Button>
               )}
               {item.status === "in_review" && (
@@ -280,10 +338,19 @@ export function ContentDetailDialog({
                 </Button>
               )}
               {canPublishInstagram && (
-                <Button type="button" size="sm" disabled={busy} onClick={handlePublishInstagram}>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={busy}
+                  onClick={handlePublishInstagram}
+                >
                   {busy
-                    ? locale === "ar" ? "جارٍ النشر..." : "Publishing..."
-                    : locale === "ar" ? "نشر على إنستغرام" : "Publish to Instagram"}
+                    ? locale === "ar"
+                      ? "جارٍ النشر..."
+                      : "Publishing..."
+                    : locale === "ar"
+                      ? "نشر على إنستغرام"
+                      : "Publish to Instagram"}
                 </Button>
               )}
               {instagramPublish?.permalink && (
@@ -324,7 +391,9 @@ export function ContentDetailDialog({
               ))
             ) : (
               <p className="text-sm text-text-muted">
-                {locale === "ar" ? "لا توجد منصات مستهدفة." : "No platform targets."}
+                {locale === "ar"
+                  ? "لا توجد منصات مستهدفة."
+                  : "No platform targets."}
               </p>
             )}
           </div>

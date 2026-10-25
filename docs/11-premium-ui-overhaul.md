@@ -98,7 +98,7 @@ showing the real token/asset/generation counts those actions produced.
 - **`functions/`** (the dormant Cloud Functions duplicate) was not touched. Its lint/typecheck/
   test/build were confirmed still green, but it was not updated to match the Worker's M2 schema
   changes — it was already drifted from the Worker before this branch, and the brief's
-  instruction was not to let it drift *further*, not to resynchronize it.
+  instruction was not to let it drift _further_, not to resynchronize it.
 
 ## Running the checks
 

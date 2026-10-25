@@ -8,7 +8,10 @@ import { useLocale } from "@/components/locale-provider";
 import { PRIMARY_BRAND_ID } from "@/lib/brand/schema";
 import { createAsset, listAssets } from "@/lib/assets/data";
 import { uploadToCloudinary } from "@/lib/assets/cloudinary";
-import { assetKindFromMimeType, validateAssetFile } from "@/lib/assets/validate";
+import {
+  assetKindFromMimeType,
+  validateAssetFile,
+} from "@/lib/assets/validate";
 import type { Asset } from "@/lib/assets/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +42,10 @@ export default function AssetsPage() {
         if (!cancelled) setAssets(list);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load assets.");
+        if (!cancelled)
+          setError(
+            err instanceof Error ? err.message : "Failed to load assets.",
+          );
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -79,7 +85,11 @@ export default function AssetsPage() {
 
   const filtered = assets.filter((a) => {
     if (kindFilter !== "all" && a.kind !== kindFilter) return false;
-    if (query && !a.tags.some((t) => t.toLowerCase().includes(query.toLowerCase())) && !a.publicId.toLowerCase().includes(query.toLowerCase())) {
+    if (
+      query &&
+      !a.tags.some((t) => t.toLowerCase().includes(query.toLowerCase())) &&
+      !a.publicId.toLowerCase().includes(query.toLowerCase())
+    ) {
       return false;
     }
     return true;
@@ -99,7 +109,10 @@ export default function AssetsPage() {
   }
 
   return (
-    <div dir={locale === "ar" ? "rtl" : "ltr"} className="flex flex-col gap-6 text-start">
+    <div
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      className="flex flex-col gap-6 text-start"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-text">
@@ -111,13 +124,27 @@ export default function AssetsPage() {
               : `${assets.length} asset${assets.length === 1 ? "" : "s"}`}
           </p>
         </div>
-        <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+        <Button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+        >
           <Upload size={16} aria-hidden="true" />
           {uploading
-            ? locale === "ar" ? "جارٍ الرفع..." : "Uploading..."
-            : locale === "ar" ? "رفع" : "Upload"}
+            ? locale === "ar"
+              ? "جارٍ الرفع..."
+              : "Uploading..."
+            : locale === "ar"
+              ? "رفع"
+              : "Upload"}
         </Button>
-        <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleFileChange} className="hidden" />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*"
+          onChange={handleFileChange}
+          className="hidden"
+        />
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -125,7 +152,11 @@ export default function AssetsPage() {
       {assets.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative max-w-xs flex-1">
-            <SearchIcon size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden="true" />
+            <SearchIcon
+              size={16}
+              className="absolute start-3 top-1/2 -translate-y-1/2 text-text-muted"
+              aria-hidden="true"
+            />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -147,10 +178,16 @@ export default function AssetsPage() {
                 style={{ transitionDuration: "var(--duration-fast)" }}
               >
                 {f === "all"
-                  ? locale === "ar" ? "الكل" : "All"
+                  ? locale === "ar"
+                    ? "الكل"
+                    : "All"
                   : f === "image"
-                    ? locale === "ar" ? "صور" : "Images"
-                    : locale === "ar" ? "فيديو" : "Videos"}
+                    ? locale === "ar"
+                      ? "صور"
+                      : "Images"
+                    : locale === "ar"
+                      ? "فيديو"
+                      : "Videos"}
               </button>
             ))}
           </div>
@@ -169,7 +206,11 @@ export default function AssetsPage() {
                   : "Upload an image or video to start the library."
               }
               action={
-                <Button type="button" size="sm" onClick={() => fileInputRef.current?.click()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   {locale === "ar" ? "رفع" : "Upload"}
                 </Button>
               }
@@ -179,7 +220,9 @@ export default function AssetsPage() {
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent>
-            <EmptyState title={locale === "ar" ? "لا توجد نتائج" : "No matches"} />
+            <EmptyState
+              title={locale === "ar" ? "لا توجد نتائج" : "No matches"}
+            />
           </CardContent>
         </Card>
       ) : (
@@ -187,16 +230,32 @@ export default function AssetsPage() {
           {filtered.map((asset) => (
             <Card key={asset.id} className="overflow-hidden">
               {asset.kind === "video" ? (
-                <video src={asset.url} controls className="h-32 w-full object-cover" />
+                <video
+                  src={asset.url}
+                  controls
+                  className="h-32 w-full object-cover"
+                />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element -- static export, no Image Optimization API available
-                <img src={asset.url} alt="" className="h-32 w-full object-cover" />
+                <img
+                  src={asset.url}
+                  alt=""
+                  className="h-32 w-full object-cover"
+                />
               )}
               <div className="flex items-center gap-1.5 p-2 text-xs text-text-muted">
-                {asset.kind === "video" ? <Video size={12} /> : <ImageIcon size={12} />}
+                {asset.kind === "video" ? (
+                  <Video size={12} />
+                ) : (
+                  <ImageIcon size={12} />
+                )}
                 {asset.kind === "video"
-                  ? locale === "ar" ? "فيديو" : "Video"
-                  : locale === "ar" ? "صورة" : "Image"}
+                  ? locale === "ar"
+                    ? "فيديو"
+                    : "Video"
+                  : locale === "ar"
+                    ? "صورة"
+                    : "Image"}
               </div>
             </Card>
           ))}

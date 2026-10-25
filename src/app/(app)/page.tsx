@@ -23,7 +23,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 
-const STATUS_TONE: Record<ContentStatus, "neutral" | "warning" | "success" | "accent"> = {
+const STATUS_TONE: Record<
+  ContentStatus,
+  "neutral" | "warning" | "success" | "accent"
+> = {
   draft: "neutral",
   in_review: "warning",
   approved: "success",
@@ -85,7 +88,12 @@ const COPY = {
   },
 };
 
-const STATUS_ORDER: ContentStatus[] = ["draft", "in_review", "approved", "published"];
+const STATUS_ORDER: ContentStatus[] = [
+  "draft",
+  "in_review",
+  "approved",
+  "published",
+];
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -113,7 +121,9 @@ export default function DashboardPage() {
         setAssetCount(assets.length);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load dashboard.");
+          setError(
+            err instanceof Error ? err.message : "Failed to load dashboard.",
+          );
         }
       } finally {
         if (!cancelled) setLoadingData(false);
@@ -173,7 +183,11 @@ export default function DashboardPage() {
             <Button asChild size="sm" className="shrink-0">
               <Link href="/brand" className="flex items-center gap-1.5">
                 {copy.onboardingCta}
-                <ArrowRight size={14} className="rtl:rotate-180" aria-hidden="true" />
+                <ArrowRight
+                  size={14}
+                  className="rtl:rotate-180"
+                  aria-hidden="true"
+                />
               </Link>
             </Button>
           </CardContent>
@@ -185,7 +199,9 @@ export default function DashboardPage() {
           <Card key={status}>
             <CardContent className="flex flex-col gap-1">
               <Badge tone={STATUS_TONE[status]} className="self-start">
-                {locale === "ar" ? STATUS_LABEL_AR[status] : STATUS_LABEL_EN[status]}
+                {locale === "ar"
+                  ? STATUS_LABEL_AR[status]
+                  : STATUS_LABEL_EN[status]}
               </Badge>
               <span className="text-3xl font-semibold text-text">{count}</span>
             </CardContent>
@@ -198,7 +214,10 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between p-5 pb-0">
             <h2 className="text-base font-semibold text-text">{copy.recent}</h2>
             {items.length > 0 && (
-              <Link href="/content" className="text-sm font-medium text-accent hover:underline">
+              <Link
+                href="/content"
+                className="text-sm font-medium text-accent hover:underline"
+              >
                 {copy.viewAll}
               </Link>
             )}
@@ -218,15 +237,22 @@ export default function DashboardPage() {
             ) : (
               <ul className="flex flex-col divide-y divide-border">
                 {recent.map((item) => (
-                  <li key={item.id} className="flex items-center justify-between gap-3 py-3">
+                  <li
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                  >
                     <div className="min-w-0">
                       <p className="truncate font-medium text-text">
                         {item.structuredPayload.hook || item.topic}
                       </p>
-                      <p className="truncate text-xs text-text-muted">{item.topic}</p>
+                      <p className="truncate text-xs text-text-muted">
+                        {item.topic}
+                      </p>
                     </div>
                     <Badge tone={STATUS_TONE[item.status]} className="shrink-0">
-                      {locale === "ar" ? STATUS_LABEL_AR[item.status] : STATUS_LABEL_EN[item.status]}
+                      {locale === "ar"
+                        ? STATUS_LABEL_AR[item.status]
+                        : STATUS_LABEL_EN[item.status]}
                     </Badge>
                   </li>
                 ))}
@@ -237,13 +263,32 @@ export default function DashboardPage() {
 
         <Card>
           <div className="p-5 pb-0">
-            <h2 className="text-base font-semibold text-text">{copy.quickActions}</h2>
+            <h2 className="text-base font-semibold text-text">
+              {copy.quickActions}
+            </h2>
           </div>
           <CardContent className="flex flex-col gap-2">
-            <QuickActionLink href="/content/new" icon={PenSquare} label={copy.newContent} />
-            <QuickActionLink href="/design" icon={Sparkles} label={copy.newDesign} />
-            <QuickActionLink href="/assets" icon={ImageIcon} label={copy.uploadAsset} hint={`${assetCount}`} />
-            <QuickActionLink href="/brand" icon={FileText} label={copy.editBrand} />
+            <QuickActionLink
+              href="/content/new"
+              icon={PenSquare}
+              label={copy.newContent}
+            />
+            <QuickActionLink
+              href="/design"
+              icon={Sparkles}
+              label={copy.newDesign}
+            />
+            <QuickActionLink
+              href="/assets"
+              icon={ImageIcon}
+              label={copy.uploadAsset}
+              hint={`${assetCount}`}
+            />
+            <QuickActionLink
+              href="/brand"
+              icon={FileText}
+              label={copy.editBrand}
+            />
           </CardContent>
         </Card>
       </div>

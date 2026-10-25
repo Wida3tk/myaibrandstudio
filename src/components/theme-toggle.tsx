@@ -4,10 +4,20 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme, type Theme } from "@/components/theme-provider";
 import { cn } from "@/lib/cn";
 
-const OPTIONS: { value: Theme; icon: typeof Sun; labelEn: string; labelAr: string }[] = [
+const OPTIONS: {
+  value: Theme;
+  icon: typeof Sun;
+  labelEn: string;
+  labelAr: string;
+}[] = [
   { value: "light", icon: Sun, labelEn: "Light theme", labelAr: "فاتح" },
   { value: "dark", icon: Moon, labelEn: "Dark theme", labelAr: "داكن" },
-  { value: "system", icon: Monitor, labelEn: "System theme", labelAr: "النظام" },
+  {
+    value: "system",
+    icon: Monitor,
+    labelEn: "System theme",
+    labelAr: "النظام",
+  },
 ];
 
 export function ThemeToggle({ locale }: { locale: "en" | "ar" }) {

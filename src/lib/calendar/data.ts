@@ -64,6 +64,14 @@ export async function deleteCalendarEntry(
   entryId: string,
 ): Promise<void> {
   await deleteDoc(
-    doc(getFirebaseDb(), "organizations", orgId, "brands", brandId, "calendarEntries", entryId),
+    doc(
+      getFirebaseDb(),
+      "organizations",
+      orgId,
+      "brands",
+      brandId,
+      "calendarEntries",
+      entryId,
+    ),
   );
 }

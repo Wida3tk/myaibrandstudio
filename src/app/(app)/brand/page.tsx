@@ -10,7 +10,13 @@ import { saveBrandProfile } from "@/lib/brand/data";
 import { brandProfileSchema, type BrandProfileInput } from "@/lib/brand/schema";
 import { listAssets } from "@/lib/assets/data";
 import type { Asset } from "@/lib/assets/schema";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FieldGroup, Input, Label, Textarea } from "@/components/ui/input";
@@ -50,7 +56,8 @@ const COPY = {
     primaryColor: "Primary color",
     logo: "Logo",
     pickFromAssets: "Pick from Assets",
-    noImageAssets: "No images in your Asset Library yet — upload one on the Assets page.",
+    noImageAssets:
+      "No images in your Asset Library yet — upload one on the Assets page.",
     save: "Save",
     saving: "Saving...",
     saved: "Saved",
@@ -78,7 +85,8 @@ const COPY = {
     primaryColor: "اللون الأساسي",
     logo: "الشعار",
     pickFromAssets: "اختر من الأصول",
-    noImageAssets: "لا توجد صور في مكتبة الأصول بعد — ارفع صورة من صفحة الأصول.",
+    noImageAssets:
+      "لا توجد صور في مكتبة الأصول بعد — ارفع صورة من صفحة الأصول.",
     save: "حفظ",
     saving: "جارٍ الحفظ...",
     saved: "تم الحفظ",
@@ -173,7 +181,10 @@ export default function BrandPage() {
   }
 
   return (
-    <div dir={locale === "ar" ? "rtl" : "ltr"} className="mx-auto flex max-w-3xl flex-col gap-6 text-start">
+    <div
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      className="mx-auto flex max-w-3xl flex-col gap-6 text-start"
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text">
@@ -206,7 +217,9 @@ export default function BrandPage() {
                 id="name"
                 required
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
               />
             </FieldGroup>
           </CardContent>
@@ -223,7 +236,9 @@ export default function BrandPage() {
             <Textarea
               rows={3}
               value={form.voiceTone}
-              onChange={(e) => setForm((f) => ({ ...f, voiceTone: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, voiceTone: e.target.value }))
+              }
             />
           </CardContent>
         </Card>
@@ -322,10 +337,14 @@ export default function BrandPage() {
                   id="color"
                   type="color"
                   value={form.primaryColor || "#6750d8"}
-                  onChange={(e) => setForm((f) => ({ ...f, primaryColor: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, primaryColor: e.target.value }))
+                  }
                   className="h-9 w-14 rounded-[var(--radius-md)] border border-border bg-bg"
                 />
-                <span className="text-sm text-text-muted">{form.primaryColor || "#6750d8"}</span>
+                <span className="text-sm text-text-muted">
+                  {form.primaryColor || "#6750d8"}
+                </span>
               </div>
             </FieldGroup>
 
@@ -356,7 +375,9 @@ export default function BrandPage() {
               {showAssetPicker && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {assets.length === 0 ? (
-                    <p className="text-xs text-text-muted">{copy.noImageAssets}</p>
+                    <p className="text-xs text-text-muted">
+                      {copy.noImageAssets}
+                    </p>
                   ) : (
                     assets.map((asset) => (
                       <button
@@ -369,7 +390,11 @@ export default function BrandPage() {
                         className="h-10 w-10 overflow-hidden rounded-[var(--radius-sm)] border border-border hover:border-accent"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element -- static export, no Image Optimization API */}
-                        <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                        <img
+                          src={asset.url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       </button>
                     ))
                   )}

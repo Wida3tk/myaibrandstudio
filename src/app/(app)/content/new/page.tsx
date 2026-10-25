@@ -22,11 +22,20 @@ import {
 import type { ContentType, Language } from "@/lib/ai/types";
 import { createDraftContentItem } from "@/lib/content/data";
 import { PLATFORMS, type Platform } from "@/lib/content/schema";
-import { PLATFORM_LABEL, PlatformPreview } from "@/components/platform-previews";
+import {
+  PLATFORM_LABEL,
+  PlatformPreview,
+} from "@/components/platform-previews";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FieldGroup, Input, Label, Select, Textarea } from "@/components/ui/input";
+import {
+  FieldGroup,
+  Input,
+  Label,
+  Select,
+  Textarea,
+} from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -237,10 +246,15 @@ export default function NewContentPage() {
   }
 
   return (
-    <div dir={locale === "ar" ? "rtl" : "ltr"} className="flex flex-col gap-6 text-start">
+    <div
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      className="flex flex-col gap-6 text-start"
+    >
       <div>
         <h1 className="text-2xl font-semibold text-text">
-          {locale === "ar" ? "استوديو المحتوى بالذكاء الاصطناعي" : "AI Content Studio"}
+          {locale === "ar"
+            ? "استوديو المحتوى بالذكاء الاصطناعي"
+            : "AI Content Studio"}
         </h1>
         <p className="mt-1 text-sm text-text-muted">
           {locale === "ar"
@@ -260,7 +274,9 @@ export default function NewContentPage() {
               >
                 {CONTENT_TYPES.map((type) => (
                   <option key={type} value={type}>
-                    {locale === "ar" ? CONTENT_TYPE_LABEL_AR[type] : CONTENT_TYPE_LABEL[type]}
+                    {locale === "ar"
+                      ? CONTENT_TYPE_LABEL_AR[type]
+                      : CONTENT_TYPE_LABEL[type]}
                   </option>
                 ))}
               </Select>
@@ -278,7 +294,9 @@ export default function NewContentPage() {
             </FieldGroup>
 
             <FieldGroup>
-              <Label htmlFor="topic">{locale === "ar" ? "الموضوع" : "Topic"}</Label>
+              <Label htmlFor="topic">
+                {locale === "ar" ? "الموضوع" : "Topic"}
+              </Label>
               <Textarea
                 id="topic"
                 required
@@ -286,7 +304,9 @@ export default function NewContentPage() {
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder={
-                  locale === "ar" ? "عمّ يتحدث هذا المحتوى؟" : "What is this content about?"
+                  locale === "ar"
+                    ? "عمّ يتحدث هذا المحتوى؟"
+                    : "What is this content about?"
                 }
               />
             </FieldGroup>
@@ -328,13 +348,20 @@ export default function NewContentPage() {
 
             <FieldGroup>
               <Label htmlFor="audience">
-                {locale === "ar" ? "الجمهور (اختياري)" : "Audience override (optional)"}
+                {locale === "ar"
+                  ? "الجمهور (اختياري)"
+                  : "Audience override (optional)"}
               </Label>
               <Input
                 id="audience"
                 value={audienceOverride}
                 onChange={(e) => setAudienceOverride(e.target.value)}
-                placeholder={brand?.audienceDescription || (locale === "ar" ? "جمهور العلامة الافتراضي" : "Defaults to your brand audience")}
+                placeholder={
+                  brand?.audienceDescription ||
+                  (locale === "ar"
+                    ? "جمهور العلامة الافتراضي"
+                    : "Defaults to your brand audience")
+                }
               />
             </FieldGroup>
 
@@ -353,9 +380,16 @@ export default function NewContentPage() {
                       addPillar();
                     }
                   }}
-                  placeholder={locale === "ar" ? "مثال: تعليمي" : "e.g. Education"}
+                  placeholder={
+                    locale === "ar" ? "مثال: تعليمي" : "e.g. Education"
+                  }
                 />
-                <Button type="button" variant="secondary" size="sm" onClick={addPillar}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={addPillar}
+                >
                   {locale === "ar" ? "إضافة" : "Add"}
                 </Button>
               </div>
@@ -367,7 +401,9 @@ export default function NewContentPage() {
                       <button
                         type="button"
                         aria-label={`Remove ${pillar}`}
-                        onClick={() => setPillars((p) => p.filter((x) => x !== pillar))}
+                        onClick={() =>
+                          setPillars((p) => p.filter((x) => x !== pillar))
+                        }
                         className="ms-0.5"
                       >
                         ×
@@ -397,7 +433,11 @@ export default function NewContentPage() {
 
             {error && (
               <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-danger/30 bg-danger-soft p-3 text-sm text-danger">
-                <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                <AlertTriangle
+                  size={16}
+                  className="mt-0.5 shrink-0"
+                  aria-hidden="true"
+                />
                 <span>
                   {locale === "ar" && error instanceof GenerationError
                     ? (ERROR_MESSAGE_AR[error.code] ?? error.message)
@@ -414,7 +454,11 @@ export default function NewContentPage() {
             >
               {submitting ? (
                 <>
-                  <RefreshCw size={16} className="animate-spin" aria-hidden="true" />
+                  <RefreshCw
+                    size={16}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
                   {locale === "ar" ? "جارٍ الإنشاء..." : "Generating..."}
                 </>
               ) : (
@@ -439,7 +483,9 @@ export default function NewContentPage() {
               <CardContent>
                 <EmptyState
                   icon={<Sparkles size={20} />}
-                  title={locale === "ar" ? "لا توجد نتائج بعد" : "No results yet"}
+                  title={
+                    locale === "ar" ? "لا توجد نتائج بعد" : "No results yet"
+                  }
                   description={
                     locale === "ar"
                       ? "املأ النموذج واضغط إنشاء لرؤية المحتوى هنا."
@@ -467,7 +513,11 @@ export default function NewContentPage() {
                       type="button"
                       onClick={() => removeVariant(activeVariant.id)}
                       className="flex items-center gap-1 text-xs text-text-muted hover:text-danger"
-                      aria-label={locale === "ar" ? "حذف هذه النسخة" : "Discard this variant"}
+                      aria-label={
+                        locale === "ar"
+                          ? "حذف هذه النسخة"
+                          : "Discard this variant"
+                      }
                     >
                       <Trash2 size={14} aria-hidden="true" />
                       {locale === "ar" ? "حذف" : "Discard"}
@@ -483,16 +533,22 @@ export default function NewContentPage() {
                           <CardContent className="flex flex-col gap-3">
                             <div className="flex items-center justify-between">
                               <span className="text-xs text-text-muted">
-                                {locale === "ar" ? "مزوّد الذكاء الاصطناعي" : "Provider"}:{" "}
-                                <Badge tone="neutral">{v.provider}</Badge>
+                                {locale === "ar"
+                                  ? "مزوّد الذكاء الاصطناعي"
+                                  : "Provider"}
+                                : <Badge tone="neutral">{v.provider}</Badge>
                               </span>
                             </div>
                             <FieldGroup>
-                              <Label htmlFor="hook">{locale === "ar" ? "الخطّاف" : "Hook"}</Label>
+                              <Label htmlFor="hook">
+                                {locale === "ar" ? "الخطّاف" : "Hook"}
+                              </Label>
                               <Input
                                 id="hook"
                                 value={v.content.hook}
-                                onChange={(e) => updateActiveContent({ hook: e.target.value })}
+                                onChange={(e) =>
+                                  updateActiveContent({ hook: e.target.value })
+                                }
                               />
                             </FieldGroup>
                             <FieldGroup>
@@ -504,13 +560,17 @@ export default function NewContentPage() {
                                 rows={4}
                                 value={v.content.caption}
                                 onChange={(e) =>
-                                  updateActiveContent({ caption: e.target.value })
+                                  updateActiveContent({
+                                    caption: e.target.value,
+                                  })
                                 }
                               />
                             </FieldGroup>
                             <FieldGroup>
                               <Label htmlFor="hashtags">
-                                {locale === "ar" ? "الوسوم (مفصولة بفواصل)" : "Hashtags (comma-separated)"}
+                                {locale === "ar"
+                                  ? "الوسوم (مفصولة بفواصل)"
+                                  : "Hashtags (comma-separated)"}
                               </Label>
                               <Input
                                 id="hashtags"
@@ -527,13 +587,17 @@ export default function NewContentPage() {
                             </FieldGroup>
                             <FieldGroup>
                               <Label htmlFor="cta">
-                                {locale === "ar" ? "دعوة لاتخاذ إجراء" : "Call to action"}
+                                {locale === "ar"
+                                  ? "دعوة لاتخاذ إجراء"
+                                  : "Call to action"}
                               </Label>
                               <Input
                                 id="cta"
                                 value={v.content.callToAction}
                                 onChange={(e) =>
-                                  updateActiveContent({ callToAction: e.target.value })
+                                  updateActiveContent({
+                                    callToAction: e.target.value,
+                                  })
                                 }
                               />
                             </FieldGroup>
@@ -555,7 +619,11 @@ export default function NewContentPage() {
                         )}
 
                         <div className="flex flex-wrap items-center gap-3">
-                          <Button type="button" variant="secondary" onClick={handleCopy}>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={handleCopy}
+                          >
                             {copied ? (
                               <Check size={16} aria-hidden="true" />
                             ) : (
@@ -591,7 +659,9 @@ export default function NewContentPage() {
                               href="/content"
                               className="text-sm font-medium text-accent hover:underline"
                             >
-                              {locale === "ar" ? "عرض في المحتوى" : "View in Content"}
+                              {locale === "ar"
+                                ? "عرض في المحتوى"
+                                : "View in Content"}
                             </Link>
                           )}
                         </div>

@@ -18,7 +18,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 // this is a display-only copy of the real configured limit, not an independent value.
 const DAILY_TOKEN_LIMIT = 50_000;
 
-const STATUS_ORDER: ContentStatus[] = ["draft", "in_review", "approved", "published"];
+const STATUS_ORDER: ContentStatus[] = [
+  "draft",
+  "in_review",
+  "approved",
+  "published",
+];
 const STATUS_LABEL_EN: Record<ContentStatus, string> = {
   draft: "Draft",
   in_review: "In review",
@@ -55,7 +60,10 @@ export default function AnalyticsPage() {
         setUsage(usageEntries);
         setItems(contentItems);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load analytics.");
+        if (!cancelled)
+          setError(
+            err instanceof Error ? err.message : "Failed to load analytics.",
+          );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -80,7 +88,10 @@ export default function AnalyticsPage() {
   const byProvider = useMemo(() => {
     const map = new Map<string, number>();
     for (const u of usage) {
-      map.set(u.provider, (map.get(u.provider) ?? 0) + u.tokensIn + u.tokensOut);
+      map.set(
+        u.provider,
+        (map.get(u.provider) ?? 0) + u.tokensIn + u.tokensOut,
+      );
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [usage]);
@@ -97,7 +108,10 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div dir={locale === "ar" ? "rtl" : "ltr"} className="flex flex-col gap-6 text-start">
+    <div
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      className="flex flex-col gap-6 text-start"
+    >
       <div>
         <h1 className="text-2xl font-semibold text-text">
           {locale === "ar" ? "التحليلات" : "Analytics"}
@@ -115,17 +129,22 @@ export default function AnalyticsPage() {
         <CardContent className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-text-muted">
-              {locale === "ar" ? "استخدام اليوم من الذكاء الاصطناعي" : "Today's AI usage"}
+              {locale === "ar"
+                ? "استخدام اليوم من الذكاء الاصطناعي"
+                : "Today's AI usage"}
             </span>
             <span className="text-sm text-text-muted">
-              {todayTokens.toLocaleString()} / {DAILY_TOKEN_LIMIT.toLocaleString()}{" "}
+              {todayTokens.toLocaleString()} /{" "}
+              {DAILY_TOKEN_LIMIT.toLocaleString()}{" "}
               {locale === "ar" ? "رمز" : "tokens"}
             </span>
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-[var(--radius-full)] bg-accent-soft">
             <div
               className="h-full rounded-[var(--radius-full)] bg-accent"
-              style={{ width: `${Math.min(100, (todayTokens / DAILY_TOKEN_LIMIT) * 100)}%` }}
+              style={{
+                width: `${Math.min(100, (todayTokens / DAILY_TOKEN_LIMIT) * 100)}%`,
+              }}
             />
           </div>
         </CardContent>
@@ -135,13 +154,19 @@ export default function AnalyticsPage() {
         <Card>
           <CardContent>
             <h2 className="text-base font-semibold text-text">
-              {locale === "ar" ? "استخدام الذكاء الاصطناعي هذا الشهر" : "AI usage this month"}
+              {locale === "ar"
+                ? "استخدام الذكاء الاصطناعي هذا الشهر"
+                : "AI usage this month"}
             </h2>
             {usage.length === 0 ? (
               <EmptyState
                 className="mt-4"
                 icon={<Sparkles size={20} />}
-                title={locale === "ar" ? "لا يوجد استخدام هذا الشهر بعد" : "No usage yet this month"}
+                title={
+                  locale === "ar"
+                    ? "لا يوجد استخدام هذا الشهر بعد"
+                    : "No usage yet this month"
+                }
                 description={
                   locale === "ar"
                     ? "ستظهر الإحصاءات هنا بعد أول عملية إنشاء محتوى."
@@ -153,18 +178,23 @@ export default function AnalyticsPage() {
                 <p className="mt-2 text-3xl font-semibold text-text">
                   {monthTokens.toLocaleString()}{" "}
                   <span className="text-sm font-normal text-text-muted">
-                    {locale === "ar" ? "رمز عبر" : "tokens across"} {usage.length}{" "}
+                    {locale === "ar" ? "رمز عبر" : "tokens across"}{" "}
+                    {usage.length}{" "}
                     {locale === "ar" ? "عملية إنشاء" : "generations"}
                   </span>
                 </p>
                 <div className="mt-4 flex flex-col gap-2">
                   {byProvider.map(([provider, tokens]) => (
                     <div key={provider} className="flex items-center gap-2">
-                      <span className="w-20 shrink-0 text-sm capitalize text-text">{provider}</span>
+                      <span className="w-20 shrink-0 text-sm capitalize text-text">
+                        {provider}
+                      </span>
                       <div className="h-2 flex-1 overflow-hidden rounded-[var(--radius-full)] bg-accent-soft">
                         <div
                           className="h-full rounded-[var(--radius-full)] bg-accent"
-                          style={{ width: `${(tokens / maxProviderTokens) * 100}%` }}
+                          style={{
+                            width: `${(tokens / maxProviderTokens) * 100}%`,
+                          }}
                         />
                       </div>
                       <span className="w-16 shrink-0 text-end text-xs text-text-muted">
@@ -193,7 +223,9 @@ export default function AnalyticsPage() {
                 {STATUS_ORDER.map((status) => (
                   <div key={status} className="flex flex-col gap-1">
                     <Badge tone="neutral" className="self-start">
-                      {locale === "ar" ? STATUS_LABEL_AR[status] : STATUS_LABEL_EN[status]}
+                      {locale === "ar"
+                        ? STATUS_LABEL_AR[status]
+                        : STATUS_LABEL_EN[status]}
                     </Badge>
                     <span className="text-2xl font-semibold text-text">
                       {items.filter((i) => i.status === status).length}

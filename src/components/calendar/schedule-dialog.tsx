@@ -62,7 +62,10 @@ export function ScheduleDialog({
           <div className="flex flex-col gap-4">
             <FieldGroup>
               <Label>{locale === "ar" ? "المحتوى" : "Content"}</Label>
-              <Select value={contentItemId} onChange={(e) => setContentItemId(e.target.value)}>
+              <Select
+                value={contentItemId}
+                onChange={(e) => setContentItemId(e.target.value)}
+              >
                 {items.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.structuredPayload.hook || item.topic}
@@ -72,7 +75,10 @@ export function ScheduleDialog({
             </FieldGroup>
             <FieldGroup>
               <Label>{locale === "ar" ? "المنصة" : "Platform"}</Label>
-              <Select value={platform} onChange={(e) => setPlatform(e.target.value as Platform)}>
+              <Select
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value as Platform)}
+              >
                 {PLATFORMS.map((p) => (
                   <option key={p} value={p}>
                     {PLATFORM_LABEL[p]}
@@ -83,8 +89,12 @@ export function ScheduleDialog({
             {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="button" onClick={handleSchedule} disabled={saving}>
               {saving
-                ? locale === "ar" ? "جارٍ الجدولة..." : "Scheduling..."
-                : locale === "ar" ? "جدولة" : "Schedule"}
+                ? locale === "ar"
+                  ? "جارٍ الجدولة..."
+                  : "Scheduling..."
+                : locale === "ar"
+                  ? "جدولة"
+                  : "Schedule"}
             </Button>
           </div>
         )}

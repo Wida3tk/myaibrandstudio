@@ -23,7 +23,11 @@ import { validateAssetFile } from "@/lib/assets/validate";
 import type { Asset } from "@/lib/assets/schema";
 import { canvasToFile } from "@/lib/design/export";
 import { FORMAT_PRESETS, getPreset } from "@/lib/design/presets";
-import { TEMPLATES, getTemplate, type TemplateObjectSpec } from "@/lib/design/templates";
+import {
+  TEMPLATES,
+  getTemplate,
+  type TemplateObjectSpec,
+} from "@/lib/design/templates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Label, Select } from "@/components/ui/input";
@@ -42,14 +46,21 @@ export default function DesignPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const fabricModuleRef = useRef<typeof import("fabric") | null>(null);
-  const historyRef = useRef<{ stack: string[]; index: number }>({ stack: [], index: -1 });
+  const historyRef = useRef<{ stack: string[]; index: number }>({
+    stack: [],
+    index: -1,
+  });
 
   const [ready, setReady] = useState(false);
   const [version, setVersion] = useState(0);
-  const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
+  const [selectedObject, setSelectedObject] = useState<FabricObject | null>(
+    null,
+  );
   const [formatId, setFormatId] = useState(FORMAT_PRESETS[0].id);
   const [zoom, setZoom] = useState(0.5);
-  const [backgroundColor, setBackgroundColor] = useState(TEMPLATES[0].background);
+  const [backgroundColor, setBackgroundColor] = useState(
+    TEMPLATES[0].background,
+  );
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
@@ -66,7 +77,9 @@ export default function DesignPage() {
     if (!canvas) return;
     const json = JSON.stringify(canvas.toJSON());
     const h = historyRef.current;
-    const nextStack = [...h.stack.slice(0, h.index + 1), json].slice(-MAX_HISTORY);
+    const nextStack = [...h.stack.slice(0, h.index + 1), json].slice(
+      -MAX_HISTORY,
+    );
     historyRef.current = { stack: nextStack, index: nextStack.length - 1 };
     setCanUndo(historyRef.current.index > 0);
     setCanRedo(false);
@@ -114,7 +127,13 @@ export default function DesignPage() {
     }
   }
 
-  function drawGuide(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number) {
+  function drawGuide(
+    ctx: CanvasRenderingContext2D,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+  ) {
     ctx.save();
     ctx.strokeStyle = "#6750d8";
     ctx.lineWidth = 1;
@@ -142,11 +161,19 @@ export default function DesignPage() {
         preserveObjectStacking: true,
       });
       fabricCanvasRef.current = canvas;
-      applySpecs(canvas, fabric, getTemplate("blank").build(preset.width, preset.height));
+      applySpecs(
+        canvas,
+        fabric,
+        getTemplate("blank").build(preset.width, preset.height),
+      );
       canvas.requestRenderAll();
 
-      canvas.on("selection:created", (e) => setSelectedObject(e.selected?.[0] ?? null));
-      canvas.on("selection:updated", (e) => setSelectedObject(e.selected?.[0] ?? null));
+      canvas.on("selection:created", (e) =>
+        setSelectedObject(e.selected?.[0] ?? null),
+      );
+      canvas.on("selection:updated", (e) =>
+        setSelectedObject(e.selected?.[0] ?? null),
+      );
       canvas.on("selection:cleared", () => setSelectedObject(null));
       canvas.on("object:modified", () => commit());
       canvas.on("text:editing:exited", () => commit());
@@ -196,7 +223,8 @@ export default function DesignPage() {
     function handleKeyDown(e: KeyboardEvent) {
       const canvas = fabricCanvasRef.current;
       if (!canvas) return;
-      const active = canvas.getActiveObject() as (FabricObject & { isEditing?: boolean }) | undefined;
+      const active = canvas.getActiveObject() as
+        (FabricObject & { isEditing?: boolean }) | undefined;
       if (active?.isEditing) return;
 
       if ((e.key === "Delete" || e.key === "Backspace") && active) {
@@ -238,10 +266,17 @@ export default function DesignPage() {
     const fabric = fabricModuleRef.current;
     if (!canvas || !fabric) return;
     const template = getTemplate(id);
-    canvas.getObjects().slice().forEach((o) => canvas.remove(o));
+    canvas
+      .getObjects()
+      .slice()
+      .forEach((o) => canvas.remove(o));
     canvas.backgroundColor = template.background;
     setBackgroundColor(template.background);
-    applySpecs(canvas, fabric, template.build(canvas.getWidth(), canvas.getHeight()));
+    applySpecs(
+      canvas,
+      fabric,
+      template.build(canvas.getWidth(), canvas.getHeight()),
+    );
     canvas.requestRenderAll();
     commit();
   }
@@ -250,16 +285,19 @@ export default function DesignPage() {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricModuleRef.current;
     if (!canvas || !fabric) return;
-    const textbox = new fabric.Textbox(locale === "ar" ? "نص جديد" : "New text", {
-      left: canvas.getWidth() / 2 - 100,
-      top: canvas.getHeight() / 2 - 20,
-      width: 200,
-      fontSize: 32,
-      fill: "#1e2440",
-      fontFamily: "Geist, sans-serif",
-      direction: locale === "ar" ? "rtl" : "ltr",
-      textAlign: locale === "ar" ? "right" : "left",
-    });
+    const textbox = new fabric.Textbox(
+      locale === "ar" ? "نص جديد" : "New text",
+      {
+        left: canvas.getWidth() / 2 - 100,
+        top: canvas.getHeight() / 2 - 20,
+        width: 200,
+        fontSize: 32,
+        fill: "#1e2440",
+        fontFamily: "Geist, sans-serif",
+        direction: locale === "ar" ? "rtl" : "ltr",
+        textAlign: locale === "ar" ? "right" : "left",
+      },
+    );
     canvas.add(textbox);
     canvas.setActiveObject(textbox);
     commit();
@@ -269,7 +307,9 @@ export default function DesignPage() {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricModuleRef.current;
     if (!canvas || !fabric) return;
-    const img = await fabric.FabricImage.fromURL(url, { crossOrigin: "anonymous" });
+    const img = await fabric.FabricImage.fromURL(url, {
+      crossOrigin: "anonymous",
+    });
     const maxWidth = canvas.getWidth() * 0.6;
     if (img.width && img.width > maxWidth) {
       img.scaleToWidth(maxWidth);
@@ -301,7 +341,17 @@ export default function DesignPage() {
         publicId: uploaded.publicId,
         kind: "image",
       });
-      setAssets((prev) => [...prev, { id: uploaded.publicId, url: uploaded.url, publicId: uploaded.publicId, kind: "image", tags: [], createdBy: user.uid }]);
+      setAssets((prev) => [
+        ...prev,
+        {
+          id: uploaded.publicId,
+          url: uploaded.url,
+          publicId: uploaded.publicId,
+          kind: "image",
+          tags: [],
+          createdBy: user.uid,
+        },
+      ]);
       await addImageFromUrl(uploaded.url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");
@@ -374,7 +424,10 @@ export default function DesignPage() {
   const canvas = fabricCanvasRef.current;
 
   return (
-    <div dir={locale === "ar" ? "rtl" : "ltr"} className="flex flex-col gap-6 text-start">
+    <div
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      className="flex flex-col gap-6 text-start"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-text">
@@ -387,23 +440,52 @@ export default function DesignPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="secondary" size="sm" onClick={handleUndo} disabled={!canUndo}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleUndo}
+            disabled={!canUndo}
+          >
             <Undo2 size={16} aria-hidden="true" />
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={handleRedo} disabled={!canRedo}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleRedo}
+            disabled={!canRedo}
+          >
             <Redo2 size={16} aria-hidden="true" />
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={handleDownload} disabled={!ready}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleDownload}
+            disabled={!ready}
+          >
             <Download size={16} aria-hidden="true" />
             {locale === "ar" ? "تنزيل" : "Download"}
           </Button>
-          <Button type="button" size="sm" onClick={handleSaveToAssets} disabled={!ready || saving || saved}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSaveToAssets}
+            disabled={!ready || saving || saved}
+          >
             <Save size={16} aria-hidden="true" />
             {saved
-              ? locale === "ar" ? "تم الحفظ" : "Saved"
+              ? locale === "ar"
+                ? "تم الحفظ"
+                : "Saved"
               : saving
-                ? locale === "ar" ? "جارٍ الحفظ..." : "Saving..."
-                : locale === "ar" ? "حفظ في الأصول" : "Save to Assets"}
+                ? locale === "ar"
+                  ? "جارٍ الحفظ..."
+                  : "Saving..."
+                : locale === "ar"
+                  ? "حفظ في الأصول"
+                  : "Save to Assets"}
           </Button>
         </div>
       </div>
@@ -415,7 +497,10 @@ export default function DesignPage() {
           <CardContent className="flex flex-col gap-4">
             <FieldGroup>
               <Label>{locale === "ar" ? "القالب" : "Template"}</Label>
-              <Select defaultValue="blank" onChange={(e) => handleApplyTemplate(e.target.value)}>
+              <Select
+                defaultValue="blank"
+                onChange={(e) => handleApplyTemplate(e.target.value)}
+              >
                 {TEMPLATES.map((t) => (
                   <option key={t.id} value={t.id}>
                     {locale === "ar" ? t.nameAr : t.nameEn}
@@ -426,10 +511,14 @@ export default function DesignPage() {
 
             <FieldGroup>
               <Label>{locale === "ar" ? "المقاس" : "Format"}</Label>
-              <Select value={formatId} onChange={(e) => handleFormatChange(e.target.value)}>
+              <Select
+                value={formatId}
+                onChange={(e) => handleFormatChange(e.target.value)}
+              >
                 {FORMAT_PRESETS.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {locale === "ar" ? p.labelAr : p.labelEn} ({p.width}×{p.height})
+                    {locale === "ar" ? p.labelAr : p.labelEn} ({p.width}×
+                    {p.height})
                   </option>
                 ))}
               </Select>
@@ -446,7 +535,12 @@ export default function DesignPage() {
             </FieldGroup>
 
             <div className="flex flex-col gap-2">
-              <Button type="button" variant="secondary" onClick={handleAddText} disabled={!ready}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAddText}
+                disabled={!ready}
+              >
                 <Type size={16} aria-hidden="true" />
                 {locale === "ar" ? "إضافة نص" : "Add text"}
               </Button>
@@ -458,8 +552,12 @@ export default function DesignPage() {
               >
                 <Upload size={16} aria-hidden="true" />
                 {uploading
-                  ? locale === "ar" ? "جارٍ الرفع..." : "Uploading..."
-                  : locale === "ar" ? "رفع صورة" : "Upload image"}
+                  ? locale === "ar"
+                    ? "جارٍ الرفع..."
+                    : "Uploading..."
+                  : locale === "ar"
+                    ? "رفع صورة"
+                    : "Upload image"}
               </Button>
               <input
                 ref={fileInputRef}
@@ -482,7 +580,11 @@ export default function DesignPage() {
                       className="h-12 w-12 overflow-hidden rounded-[var(--radius-sm)] border border-border hover:border-accent"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- static export, no Image Optimization API */}
-                      <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                      <img
+                        src={asset.url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
                     </button>
                   ))}
                 </div>
@@ -497,7 +599,12 @@ export default function DesignPage() {
               className="scrollbar-thin max-w-full overflow-auto rounded-[var(--radius-lg)] border border-border bg-surface p-4 shadow-[var(--shadow-sm)]"
               style={{ maxHeight: "70vh" }}
             >
-              <div style={{ width: preset.width * zoom, height: preset.height * zoom }}>
+              <div
+                style={{
+                  width: preset.width * zoom,
+                  height: preset.height * zoom,
+                }}
+              >
                 <div
                   style={{
                     width: preset.width,
@@ -512,11 +619,23 @@ export default function DesignPage() {
             </div>
             {!ready && <Skeleton className="h-10 w-48" />}
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" size="icon" onClick={() => setZoom((z) => Math.max(0.1, z - 0.1))}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setZoom((z) => Math.max(0.1, z - 0.1))}
+              >
                 <ZoomOut size={16} />
               </Button>
-              <span className="w-12 text-center text-sm text-text-muted">{Math.round(zoom * 100)}%</span>
-              <Button type="button" variant="ghost" size="icon" onClick={() => setZoom((z) => Math.min(1.5, z + 0.1))}>
+              <span className="w-12 text-center text-sm text-text-muted">
+                {Math.round(zoom * 100)}%
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setZoom((z) => Math.min(1.5, z + 0.1))}
+              >
                 <ZoomIn size={16} />
               </Button>
             </div>
@@ -535,7 +654,9 @@ export default function DesignPage() {
                       canvas?.remove(selectedObject);
                       commit();
                     }}
-                    aria-label={locale === "ar" ? "حذف المحدد" : "Delete selected"}
+                    aria-label={
+                      locale === "ar" ? "حذف المحدد" : "Delete selected"
+                    }
                     className="text-text-muted hover:text-danger"
                   >
                     <Trash2 size={14} />

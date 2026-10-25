@@ -46,7 +46,9 @@ export function LayersPanel({
           <li
             key={i}
             className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-sm ${
-              selected ? "bg-accent-soft text-accent" : "text-text hover:bg-surface-raised"
+              selected
+                ? "bg-accent-soft text-accent"
+                : "text-text hover:bg-surface-raised"
             }`}
           >
             <button
