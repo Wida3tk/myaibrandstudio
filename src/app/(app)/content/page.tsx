@@ -1,337 +1,284 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { LayoutGrid, List, Search as SearchIcon, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { ensureOrgForUser } from "@/lib/org/bootstrap";
+import { useOrg } from "@/lib/org/use-org";
+import { useLocale } from "@/components/locale-provider";
 import { PRIMARY_BRAND_ID } from "@/lib/brand/schema";
-import { getBrandProfile } from "@/lib/brand/data";
-import {
-  attachImageToContentItem,
-  listContentItems,
-  nextStatus,
-  transitionContentItem,
-} from "@/lib/content/data";
-import type { ContentItem, ContentStatus } from "@/lib/content/schema";
-import { PlatformPreview } from "@/components/platform-previews";
+import { listContentItems } from "@/lib/content/data";
 import { listAssets } from "@/lib/assets/data";
+import type { ContentItem, ContentStatus } from "@/lib/content/schema";
 import type { Asset } from "@/lib/assets/schema";
-import { publishToInstagram } from "@/lib/publish/instagram";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ContentDetailDialog } from "@/components/content/content-detail-dialog";
 
-const STATUS_LABEL: Record<ContentStatus, string> = {
+const STATUS_LABEL_EN: Record<ContentStatus, string> = {
   draft: "Draft",
   in_review: "In review",
   approved: "Approved",
   published: "Published",
 };
-
-const STATUS_COLOR: Record<ContentStatus, string> = {
-  draft: "text-text-muted",
-  in_review: "text-warning",
-  approved: "text-success",
-  published: "text-accent",
+const STATUS_LABEL_AR: Record<ContentStatus, string> = {
+  draft: "مسودة",
+  in_review: "قيد المراجعة",
+  approved: "معتمد",
+  published: "منشور",
 };
+const STATUS_TONE: Record<ContentStatus, "neutral" | "warning" | "success" | "accent"> = {
+  draft: "neutral",
+  in_review: "warning",
+  approved: "success",
+  published: "accent",
+};
+const FILTERS: ("all" | ContentStatus)[] = ["all", "draft", "in_review", "approved", "published"];
 
 export default function ContentListPage() {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
+  const { orgId, brand, loading: orgLoading } = useOrg();
+  const { locale } = useLocale();
 
-  const [orgId, setOrgId] = useState<string | null>(null);
-  const [brandName, setBrandName] = useState("Your Brand");
   const [items, setItems] = useState<ContentItem[]>([]);
   const [imageAssets, setImageAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [pickingImageFor, setPickingImageFor] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | ContentStatus>("all");
+  const [view, setView] = useState<"card" | "list">("card");
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/login");
-    }
-  }, [authLoading, user, router]);
-
-  async function refresh(resolvedOrgId: string) {
-    const list = await listContentItems(resolvedOrgId, PRIMARY_BRAND_ID);
-    setItems(list);
-  }
-
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const resolvedOrgId = await ensureOrgForUser(user);
-      setOrgId(resolvedOrgId);
-      const brand = await getBrandProfile(resolvedOrgId);
-      if (brand?.name) setBrandName(brand.name);
-      const assets = await listAssets(resolvedOrgId, PRIMARY_BRAND_ID);
-      setImageAssets(assets.filter((a) => a.kind === "image"));
-      await refresh(resolvedOrgId);
-      setLoading(false);
-    })();
-  }, [user]);
-
-  async function handleTransition(
-    item: ContentItem,
-    toStatus: ContentStatus,
-    action: string,
-  ) {
-    if (!orgId || !user) return;
-    setError(null);
-    setBusyId(item.id);
-    try {
-      await transitionContentItem(
-        orgId,
-        PRIMARY_BRAND_ID,
-        item,
-        toStatus,
-        user.uid,
-        action,
-      );
-      await refresh(orgId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update status.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleAttachImage(item: ContentItem, imageUrl: string) {
     if (!orgId) return;
-    setError(null);
-    setBusyId(item.id);
-    try {
-      await attachImageToContentItem(
-        orgId,
-        PRIMARY_BRAND_ID,
-        item.id,
-        imageUrl,
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const [contentItems, assets] = await Promise.all([
+          listContentItems(orgId, PRIMARY_BRAND_ID),
+          listAssets(orgId, PRIMARY_BRAND_ID),
+        ]);
+        if (cancelled) return;
+        setItems(contentItems);
+        setImageAssets(assets.filter((a) => a.kind === "image"));
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load content.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((item) => {
+      if (statusFilter !== "all" && item.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        item.topic.toLowerCase().includes(q) ||
+        item.structuredPayload.hook.toLowerCase().includes(q) ||
+        item.structuredPayload.caption.toLowerCase().includes(q)
       );
-      setPickingImageFor(null);
-      await refresh(orgId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to attach image.");
-    } finally {
-      setBusyId(null);
-    }
+    });
+  }, [items, query, statusFilter]);
+
+  const openItem = items.find((i) => i.id === openItemId) ?? null;
+
+  function handleChanged(updated: ContentItem) {
+    setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
   }
 
-  async function handlePublishInstagram(item: ContentItem) {
-    if (!orgId || !item.imageUrl) return;
-    setError(null);
-    setBusyId(item.id);
-    try {
-      await publishToInstagram({
-        orgId,
-        brandId: PRIMARY_BRAND_ID,
-        contentItemId: item.id,
-        imageUrl: item.imageUrl,
-        caption: item.structuredPayload.caption,
-      });
-      await refresh(orgId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to publish.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  if (authLoading || loading) {
-    return <p className="text-text-muted">Loading…</p>;
+  if (orgLoading || loading) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-9 w-48" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-40" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-xl font-semibold text-text">Content</h1>
+    <div dir={locale === "ar" ? "rtl" : "ltr"} className="flex flex-col gap-6 text-start">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-text">
+            {locale === "ar" ? "مكتبة المحتوى" : "Content Library"}
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            {locale === "ar" ? `${items.length} عنصر` : `${items.length} items`}
+          </p>
+        </div>
+        <Button asChild size="sm">
+          <Link href="/content/new">{locale === "ar" ? "إنشاء محتوى" : "Generate content"}</Link>
+        </Button>
+      </div>
 
-      {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
-      {items.length === 0 ? (
-        <p className="mt-6 text-sm text-text-muted">
-          Nothing here yet — generate something on the Generate content page and
-          save it as a draft.
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-xs flex-1">
+          <SearchIcon size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden="true" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={locale === "ar" ? "بحث" : "Search"}
+            className="ps-9"
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setStatusFilter(f)}
+              className={`rounded-[var(--radius-full)] border px-3 py-1 text-sm transition-colors ${
+                statusFilter === f
+                  ? "border-accent bg-accent-soft text-accent"
+                  : "border-border text-text-muted hover:border-border-strong"
+              }`}
+              style={{ transitionDuration: "var(--duration-fast)" }}
+            >
+              {f === "all"
+                ? locale === "ar" ? "الكل" : "All"
+                : locale === "ar" ? STATUS_LABEL_AR[f] : STATUS_LABEL_EN[f]}
+            </button>
+          ))}
+        </div>
+        <div className="ms-auto flex items-center gap-1 rounded-[var(--radius-md)] border border-border p-0.5">
+          <button
+            type="button"
+            aria-label={locale === "ar" ? "عرض البطاقات" : "Card view"}
+            aria-pressed={view === "card"}
+            onClick={() => setView("card")}
+            className={`flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] ${view === "card" ? "bg-accent-soft text-accent" : "text-text-muted"}`}
+          >
+            <LayoutGrid size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label={locale === "ar" ? "عرض القائمة" : "List view"}
+            aria-pressed={view === "list"}
+            onClick={() => setView("list")}
+            className={`flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] ${view === "list" ? "bg-accent-soft text-accent" : "text-text-muted"}`}
+          >
+            <List size={16} />
+          </button>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <Card>
+          <CardContent>
+            <EmptyState
+              icon={<Sparkles size={20} />}
+              title={
+                items.length === 0
+                  ? locale === "ar" ? "لا يوجد محتوى بعد" : "No content yet"
+                  : locale === "ar" ? "لا توجد نتائج" : "No matches"
+              }
+              description={
+                items.length === 0
+                  ? locale === "ar"
+                    ? "أنشئ أول محتوى لك ليظهر هنا."
+                    : "Generate your first piece of content to see it here."
+                  : locale === "ar"
+                    ? "جرّب تغيير البحث أو الفلتر."
+                    : "Try a different search or filter."
+              }
+              action={
+                items.length === 0 ? (
+                  <Button asChild size="sm">
+                    <Link href="/content/new">{locale === "ar" ? "إنشاء محتوى" : "Generate content"}</Link>
+                  </Button>
+                ) : undefined
+              }
+            />
+          </CardContent>
+        </Card>
+      ) : view === "card" ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setOpenItemId(item.id)}
+              className="text-start"
+            >
+              <Card className="h-full transition-shadow hover:shadow-[var(--shadow-md)]" style={{ transitionDuration: "var(--duration-base)" }}>
+                {item.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- static export
+                  <img src={item.imageUrl} alt="" className="h-32 w-full rounded-t-[var(--radius-lg)] object-cover" />
+                )}
+                <CardContent className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge tone={STATUS_TONE[item.status]}>
+                      {locale === "ar" ? STATUS_LABEL_AR[item.status] : STATUS_LABEL_EN[item.status]}
+                    </Badge>
+                    <span className="text-xs text-text-muted">{item.platformTargets.length}</span>
+                  </div>
+                  <p className="line-clamp-2 font-medium text-text">
+                    {item.structuredPayload.hook || item.topic}
+                  </p>
+                  <p className="line-clamp-2 text-sm text-text-muted">{item.structuredPayload.caption}</p>
+                </CardContent>
+              </Card>
+            </button>
+          ))}
+        </div>
       ) : (
-        <ul className="mt-6 flex flex-col gap-3">
-          {items.map((item) => {
-            const forward = nextStatus(item.status);
-            const isExpanded = expanded === item.id;
-            const instagramPublish = item.publishes.instagram;
-            const canPublishInstagram =
-              item.status === "approved" &&
-              item.platformTargets.includes("instagram") &&
-              item.imageUrl &&
-              !instagramPublish;
-
-            return (
-              <li
-                key={item.id}
-                className="rounded-md border border-border bg-surface p-4"
-              >
+        <Card>
+          <ul className="divide-y divide-border">
+            {filtered.map((item) => (
+              <li key={item.id}>
                 <button
                   type="button"
-                  onClick={() => setExpanded(isExpanded ? null : item.id)}
-                  className="flex w-full items-center justify-between text-start"
+                  onClick={() => setOpenItemId(item.id)}
+                  className="flex w-full items-center gap-3 px-5 py-3 text-start hover:bg-accent-soft/50"
                 >
-                  <span className="font-medium text-text">
-                    {item.structuredPayload.hook || item.topic}
-                  </span>
-                  <span
-                    className={`text-sm font-medium ${STATUS_COLOR[item.status]}`}
-                  >
-                    {STATUS_LABEL[item.status]}
-                  </span>
-                </button>
-
-                {isExpanded && (
-                  <div className="mt-3 border-t border-border pt-3">
-                    {item.platformTargets.length > 0 ? (
-                      <div className="flex flex-wrap gap-6">
-                        {item.platformTargets.map((platform) => (
-                          <PlatformPreview
-                            key={platform}
-                            platform={platform}
-                            brandName={brandName}
-                            content={item.structuredPayload}
-                            language={item.language}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div
-                        dir={item.language === "ar" ? "rtl" : "ltr"}
-                        lang={item.language}
-                        className="text-start"
-                      >
-                        <p className="text-text">
-                          {item.structuredPayload.caption}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="mt-4">
-                      <p className="text-sm text-text-muted">Image</p>
-                      {item.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- static export, no Image Optimization API
-                        <img
-                          src={item.imageUrl}
-                          alt=""
-                          className="mt-2 h-24 w-24 rounded-md border border-border object-cover"
-                        />
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPickingImageFor(
-                              pickingImageFor === item.id ? null : item.id,
-                            )
-                          }
-                          className="mt-2 rounded-md border border-border px-3 py-1.5 text-sm text-text hover:bg-bg"
-                        >
-                          Attach image
-                        </button>
-                      )}
-                      {pickingImageFor === item.id && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {imageAssets.length === 0 ? (
-                            <p className="text-sm text-text-muted">
-                              No images in your Asset Library yet.
-                            </p>
-                          ) : (
-                            imageAssets.map((asset) => (
-                              <button
-                                key={asset.id}
-                                type="button"
-                                onClick={() =>
-                                  handleAttachImage(item, asset.url)
-                                }
-                                disabled={busyId === item.id}
-                                className="h-16 w-16 overflow-hidden rounded-md border border-border"
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element -- static export, no Image Optimization API */}
-                                <img
-                                  src={asset.url}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                />
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {forward && (
-                        <button
-                          type="button"
-                          disabled={busyId === item.id}
-                          onClick={() =>
-                            handleTransition(
-                              item,
-                              forward,
-                              forward === "approved" ? "approved" : "submitted",
-                            )
-                          }
-                          className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-contrast disabled:opacity-60"
-                        >
-                          {forward === "in_review"
-                            ? "Submit for review"
-                            : "Approve"}
-                        </button>
-                      )}
-                      {item.status === "in_review" && (
-                        <button
-                          type="button"
-                          disabled={busyId === item.id}
-                          onClick={() =>
-                            handleTransition(item, "draft", "changes_requested")
-                          }
-                          className="rounded-md border border-border px-3 py-1.5 text-sm text-text hover:bg-bg disabled:opacity-60"
-                        >
-                          Request changes
-                        </button>
-                      )}
-                      {canPublishInstagram && (
-                        <button
-                          type="button"
-                          disabled={busyId === item.id}
-                          onClick={() => handlePublishInstagram(item)}
-                          className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-contrast disabled:opacity-60"
-                        >
-                          {busyId === item.id
-                            ? "Publishing…"
-                            : "Publish to Instagram"}
-                        </button>
-                      )}
-                      {instagramPublish?.permalink && (
-                        <a
-                          href={instagramPublish.permalink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="self-center text-sm text-accent underline"
-                        >
-                          View on Instagram
-                        </a>
-                      )}
-                    </div>
-
-                    <ol className="mt-4 flex flex-col gap-1 text-xs text-text-muted">
-                      {item.history.map((h, i) => (
-                        <li key={i}>
-                          {new Date(h.at).toLocaleString()} — {h.action}
-                          {h.fromStatus
-                            ? ` (${h.fromStatus} → ${h.toStatus})`
-                            : ""}
-                        </li>
-                      ))}
-                    </ol>
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- static export
+                    <img src={item.imageUrl} alt="" className="h-10 w-10 shrink-0 rounded-[var(--radius-sm)] object-cover" />
+                  ) : (
+                    <div className="h-10 w-10 shrink-0 rounded-[var(--radius-sm)] bg-accent-soft" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-text">
+                      {item.structuredPayload.hook || item.topic}
+                    </p>
+                    <p className="truncate text-xs text-text-muted">{item.topic}</p>
                   </div>
-                )}
+                  <Badge tone={STATUS_TONE[item.status]} className="shrink-0">
+                    {locale === "ar" ? STATUS_LABEL_AR[item.status] : STATUS_LABEL_EN[item.status]}
+                  </Badge>
+                </button>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {openItem && orgId && user && (
+        <ContentDetailDialog
+          item={openItem}
+          orgId={orgId}
+          uid={user.uid}
+          brandName={brand?.name ?? "Your Brand"}
+          imageAssets={imageAssets}
+          onClose={() => setOpenItemId(null)}
+          onChanged={handleChanged}
+        />
       )}
     </div>
   );

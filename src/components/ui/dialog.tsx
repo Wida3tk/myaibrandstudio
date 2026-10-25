@@ -24,9 +24,9 @@ export function DialogContent({
       <RadixDialog.Overlay className="dialog-overlay fixed inset-0 z-50 bg-navy/40 backdrop-blur-sm" />
       <RadixDialog.Content
         className={cn(
-          "dialog-content fixed start-1/2 top-1/2 z-50 w-[min(92vw,32rem)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-lg)] border border-border bg-surface p-6 shadow-[var(--shadow-lg)] focus:outline-none",
+          "dialog-content fixed start-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-lg)] border border-border bg-surface p-6 shadow-[var(--shadow-lg)] focus:outline-none",
           "rtl:translate-x-1/2",
-          className,
+          className ?? "w-[min(92vw,32rem)]",
         )}
       >
         <RadixDialog.Title className="text-lg font-semibold text-text">

@@ -11,6 +11,16 @@ export const brandProfileSchema = z.object({
   audienceDescription: z.string().trim().max(1000).optional().default(""),
   objectives: z.array(z.string().trim().min(1)).max(20).default([]),
   memoryFacts: z.array(z.string().trim().min(1)).max(50).default([]),
+  // Visual identity (M4): optional, used to pre-fill the Design Studio and previews.
+  primaryColor: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^#[0-9a-fA-F]{6}$/.test(v), {
+      message: "Must be a hex color like #6750D8",
+    })
+    .optional()
+    .default(""),
+  logoUrl: z.string().trim().optional().default(""),
 });
 
 export type BrandProfileInput = z.infer<typeof brandProfileSchema>;

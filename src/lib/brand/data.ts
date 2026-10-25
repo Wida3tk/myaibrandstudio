@@ -25,6 +25,7 @@ export async function getBrandProfile(
     audience?: { description?: string };
     objectives?: string[];
     memory?: { facts?: string[] };
+    visual?: { primaryColor?: string; logoUrl?: string };
   };
   return {
     name: data.name ?? "",
@@ -32,6 +33,8 @@ export async function getBrandProfile(
     audienceDescription: data.audience?.description ?? "",
     objectives: data.objectives ?? [],
     memoryFacts: data.memory?.facts ?? [],
+    primaryColor: data.visual?.primaryColor ?? "",
+    logoUrl: data.visual?.logoUrl ?? "",
   };
 }
 
@@ -48,6 +51,7 @@ export async function saveBrandProfile(
       audience: { description: input.audienceDescription },
       objectives: input.objectives,
       memory: { facts: input.memoryFacts, lastUpdatedAt: serverTimestamp() },
+      visual: { primaryColor: input.primaryColor, logoUrl: input.logoUrl },
       updatedAt: serverTimestamp(),
       ...(isNew ? { createdAt: serverTimestamp() } : {}),
     },
