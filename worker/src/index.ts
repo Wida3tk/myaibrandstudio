@@ -41,6 +41,11 @@ const generateRequestSchema = z.object({
   contentType: z.enum(["post", "hook", "caption", "script", "calendar-note"]),
   language: z.enum(["ar", "en"]),
   topic: z.string().trim().min(1).max(500),
+  // Optional per-generation overrides layered onto the brand's stored defaults.
+  toneOverride: z.string().trim().max(200).optional(),
+  audienceOverride: z.string().trim().max(500).optional(),
+  pillars: z.array(z.string().trim().min(1)).max(10).optional(),
+  customInstructions: z.string().trim().max(1000).optional(),
 });
 
 const publishRequestSchema = z.object({
@@ -101,7 +106,17 @@ async function handleGenerateContent(
       headers,
     );
   }
-  const { orgId, brandId, contentType, language, topic } = parsed.data;
+  const {
+    orgId,
+    brandId,
+    contentType,
+    language,
+    topic,
+    toneOverride,
+    audienceOverride,
+    pillars,
+    customInstructions,
+  } = parsed.data;
 
   const member = await firestore.getDocument(
     `organizations/${orgId}/members/${uid}`,
@@ -155,6 +170,10 @@ async function handleGenerateContent(
         brandAudience: brandDoc.audience?.description ?? "",
         brandMemoryFacts: brandDoc.memory?.facts ?? [],
         topic,
+        toneOverride,
+        audienceOverride,
+        pillars,
+        customInstructions,
       },
       providers,
     );
