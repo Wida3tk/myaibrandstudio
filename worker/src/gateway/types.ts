@@ -27,7 +27,7 @@ export interface GenerationResult {
   tokensOut: number;
 }
 
-export interface AIProvider {
+export interface AIProvider<TReq = GenerationRequest, TRes = GenerationResult> {
   id: string;
-  generate(req: GenerationRequest): Promise<GenerationResult>;
+  generate(req: TReq): Promise<TRes>;
 }

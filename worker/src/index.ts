@@ -18,6 +18,12 @@ import {
   InstagramPublishError,
   publishToInstagram,
 } from "./instagram/publish.js";
+import { creativeBriefRequestSchema } from "./gateway/creative/schema.js";
+import { createCreativeDirectorProviders } from "./gateway/creative/providers.js";
+import {
+  generateBackgroundImage,
+  ImageProviderUnavailableError,
+} from "./gateway/creative/image.js";
 
 export interface Env {
   FIREBASE_PROJECT_ID: string;
@@ -29,6 +35,10 @@ export interface Env {
   OPENROUTER_API_KEY: string;
   IG_ACCESS_TOKEN: string;
   IG_USER_ID: string;
+  /** Cloudflare account id — not a secret, same category as IG_USER_ID (see wrangler.toml). */
+  CF_ACCOUNT_ID: string;
+  /** API token scoped to Workers AI:Read/Edit — see docs/07-cloudflare-worker-setup.md §6. */
+  CF_API_TOKEN: string;
 }
 
 // Conservative default; per-org configurable budgets are later work (see
@@ -46,6 +56,12 @@ const generateRequestSchema = z.object({
   audienceOverride: z.string().trim().max(500).optional(),
   pillars: z.array(z.string().trim().min(1)).max(10).optional(),
   customInstructions: z.string().trim().max(1000).optional(),
+});
+
+const creativeImageRequestSchema = z.object({
+  orgId: z.string().min(1),
+  brandId: z.string().min(1),
+  prompt: z.string().trim().min(1).max(400),
 });
 
 const publishRequestSchema = z.object({
@@ -200,6 +216,150 @@ async function handleGenerateContent(
   );
 }
 
+async function handleCreativeBrief(
+  request: Request,
+  env: Env,
+  uid: string,
+  firestore: FirestoreClient,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid-json" }, 400, headers);
+  }
+
+  const parsed = creativeBriefRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(
+      { error: "invalid-argument", message: parsed.error.issues[0]?.message },
+      400,
+      headers,
+    );
+  }
+  const { orgId, brandId, ...brief } = parsed.data;
+
+  const member = await firestore.getDocument(
+    `organizations/${orgId}/members/${uid}`,
+  );
+  if (!member) {
+    return json({ error: "permission-denied" }, 403, headers);
+  }
+
+  const brand = await firestore.getDocument(
+    `organizations/${orgId}/brands/${brandId}`,
+  );
+  if (!brand) {
+    return json({ error: "not-found" }, 404, headers);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const yyyymm = today.slice(0, 7).replace("-", "");
+  const usageCollectionPath = `usage/${orgId}/${yyyymm}`;
+
+  const tokensUsedToday = await firestore.sumTokensForDate(
+    usageCollectionPath,
+    today,
+  );
+  if (
+    !isWithinBudget({ tokensUsedToday }, { dailyTokenLimit: DAILY_TOKEN_LIMIT })
+  ) {
+    return json({ error: "resource-exhausted" }, 429, headers);
+  }
+
+  const brandDoc = brand as {
+    name?: string;
+    voice?: { tone?: string };
+    audience?: { description?: string };
+    memory?: { facts?: string[] };
+    visual?: { primaryColor?: string; logoUrl?: string };
+  };
+
+  let result;
+  try {
+    result = await generateWithFallback(
+      {
+        orgId,
+        brandId,
+        ...brief,
+        brandName: brandDoc.name ?? "",
+        brandVoice: brandDoc.voice?.tone ?? "",
+        brandAudience: brandDoc.audience?.description ?? "",
+        brandMemoryFacts: brandDoc.memory?.facts ?? [],
+        brandPrimaryColor: brandDoc.visual?.primaryColor ?? "",
+        brandHasLogo: Boolean(brandDoc.visual?.logoUrl),
+      },
+      createCreativeDirectorProviders(env),
+    );
+  } catch (error) {
+    console.error("creative director generateWithFallback failed", error);
+    return json({ error: "all-providers-failed" }, 502, headers);
+  }
+
+  await firestore.createDocument(usageCollectionPath, {
+    provider: result.provider,
+    model: result.model,
+    brandId,
+    contentType: "creative-brief",
+    tokensIn: result.tokensIn,
+    tokensOut: result.tokensOut,
+    date: today,
+    createdAt: new Date().toISOString(),
+  });
+
+  return json({ spec: result.spec, provider: result.provider }, 200, headers);
+}
+
+async function handleCreativeImage(
+  request: Request,
+  env: Env,
+  uid: string,
+  firestore: FirestoreClient,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid-json" }, 400, headers);
+  }
+
+  const parsed = creativeImageRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(
+      { error: "invalid-argument", message: parsed.error.issues[0]?.message },
+      400,
+      headers,
+    );
+  }
+  const { orgId, brandId, prompt } = parsed.data;
+
+  const member = await firestore.getDocument(
+    `organizations/${orgId}/members/${uid}`,
+  );
+  if (!member) {
+    return json({ error: "permission-denied" }, 403, headers);
+  }
+  const brand = await firestore.getDocument(
+    `organizations/${orgId}/brands/${brandId}`,
+  );
+  if (!brand) {
+    return json({ error: "not-found" }, 404, headers);
+  }
+
+  try {
+    const image = await generateBackgroundImage(env, prompt);
+    return json({ available: true, ...image }, 200, headers);
+  } catch (error) {
+    if (error instanceof ImageProviderUnavailableError) {
+      return json({ available: false, reason: "unavailable" }, 200, headers);
+    }
+    console.error("generateBackgroundImage failed", error);
+    return json({ available: false, reason: "failed" }, 200, headers);
+  }
+}
+
 async function handleInstagramPublish(
   request: Request,
   env: Env,
@@ -329,6 +489,12 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === "/publish/instagram") {
       return handleInstagramPublish(request, env, uid, firestore, headers);
+    }
+    if (pathname === "/creative/brief") {
+      return handleCreativeBrief(request, env, uid, firestore, headers);
+    }
+    if (pathname === "/creative/image") {
+      return handleCreativeImage(request, env, uid, firestore, headers);
     }
 
     return handleGenerateContent(request, env, uid, firestore, headers);

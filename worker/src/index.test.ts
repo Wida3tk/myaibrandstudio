@@ -40,6 +40,8 @@ const env = {
   OPENROUTER_API_KEY: "openrouter-key",
   IG_ACCESS_TOKEN: "ig-token",
   IG_USER_ID: "ig-user-1",
+  CF_ACCOUNT_ID: "cf-account-1",
+  CF_API_TOKEN: "cf-token",
 };
 
 function request(body: unknown, headers: Record<string, string> = {}) {
@@ -52,6 +54,28 @@ function request(body: unknown, headers: Record<string, string> = {}) {
 
 function publishRequest(body: unknown, headers: Record<string, string> = {}) {
   return new Request("https://worker.example/publish/instagram", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+}
+
+function creativeBriefRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
+  return new Request("https://worker.example/creative/brief", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+}
+
+function creativeImageRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
+  return new Request("https://worker.example/creative/image", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
@@ -215,6 +239,145 @@ describe("worker fetch handler", () => {
       `usage/org1/${expectedYyyymm}`,
       expect.objectContaining({ tokensIn: 10, tokensOut: 20 }),
     );
+    vi.unstubAllGlobals();
+  });
+});
+
+const validCreativeBriefBody = {
+  orgId: "org1",
+  brandId: "brand1",
+  objective: "Promote a new course",
+  platform: "ig-post",
+  language: "en",
+  width: 1080,
+  height: 1080,
+};
+
+describe("worker fetch handler — /creative/brief", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mocks.getGoogleAccessToken.mockResolvedValue("access-token");
+    mocks.sumTokensForDate.mockResolvedValue(0);
+  });
+
+  it("returns 403 when the user is not an org member", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument.mockResolvedValue(null);
+    const res = await worker.fetch(
+      creativeBriefRequest(validCreativeBriefBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 with a validated spec on success", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({
+        name: "Acme",
+        voice: { tone: "warm" },
+        audience: { description: "everyone" },
+        memory: { facts: [] },
+        visual: { primaryColor: "#6750D8", logoUrl: "" },
+      });
+
+    const spec = {
+      campaignConcept: "Bold launch",
+      headline: "New course, new you",
+      supportingCopy: "Enroll today.",
+      cta: "Enroll now",
+      visualDirection: "Warm editorial photography",
+      colorPalette: ["#6750D8", "#F8F6F2"],
+      imagePrompts: ["A warm, softly lit desk, editorial photography"],
+      layoutComposition: "Full-bleed background, headline lower third",
+      typographyHierarchy: { headline: "bold", body: "regular", cta: "bold pill" },
+      platformDimensions: { width: 1, height: 1 }, // the handler must override this with the request's own size
+      brandConstraints: [],
+    };
+    const providerResponse = {
+      choices: [{ message: { content: JSON.stringify(spec) } }],
+      usage: { prompt_tokens: 10, completion_tokens: 20 },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(new Response(JSON.stringify(providerResponse), { status: 200 })),
+    );
+
+    const res = await worker.fetch(
+      creativeBriefRequest(validCreativeBriefBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as {
+      spec: { headline: string; platformDimensions: { width: number; height: number } };
+      provider: string;
+    };
+    expect(payload.spec.headline).toBe("New course, new you");
+    expect(payload.spec.platformDimensions).toEqual({ width: 1080, height: 1080 });
+    expect(payload.provider).toBe("groq");
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("worker fetch handler — /creative/image", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mocks.getGoogleAccessToken.mockResolvedValue("access-token");
+  });
+
+  it("returns available:false rather than an error when the image provider is unconfigured", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument.mockResolvedValueOnce({ role: "owner" }).mockResolvedValueOnce({});
+
+    const res = await worker.fetch(
+      creativeImageRequest(
+        { orgId: "org1", brandId: "brand1", prompt: "a cat" },
+        { Authorization: "Bearer ok" },
+      ),
+      { ...env, CF_ACCOUNT_ID: "", CF_API_TOKEN: "" },
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as { available: boolean; reason?: string };
+    expect(payload).toEqual({ available: false, reason: "unavailable" });
+  });
+
+  it("returns the generated image on success", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument.mockResolvedValueOnce({ role: "owner" }).mockResolvedValueOnce({});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ success: true, result: { image: "b64" } }), {
+          status: 200,
+        }),
+      ),
+    );
+
+    const res = await worker.fetch(
+      creativeImageRequest(
+        { orgId: "org1", brandId: "brand1", prompt: "a cat" },
+        { Authorization: "Bearer ok" },
+      ),
+      env,
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as { available: boolean; base64: string };
+    expect(payload).toEqual({
+      available: true,
+      base64: "b64",
+      mimeType: "image/jpeg",
+      provider: "cloudflare-workers-ai",
+    });
     vi.unstubAllGlobals();
   });
 });

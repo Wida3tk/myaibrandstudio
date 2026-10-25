@@ -10,6 +10,11 @@ ALLOWED_ORIGINS = "http://localhost:3000,https://myaibrandstudio-dev.web.app,htt
 # but isn't known until the Meta app is set up — add it here once it is:
 # IG_USER_ID = "..."
 
+# CF_ACCOUNT_ID is not a secret either (an account identifier) — the Cloudflare dashboard's
+# right-hand sidebar shows it, or `npx wrangler whoami`. Needed for AI creative image generation
+# (docs/07-cloudflare-worker-setup.md §6); the pipeline degrades to a gradient fallback without it.
+# CF_ACCOUNT_ID = "..."
+
 # Secrets (never in this file — set via `wrangler secret put <NAME>`):
 #   GCP_SERVICE_ACCOUNT_JSON  — the full JSON key of a Firestore-scoped service account
 #   GROQ_API_KEY
@@ -17,3 +22,5 @@ ALLOWED_ORIGINS = "http://localhost:3000,https://myaibrandstudio-dev.web.app,htt
 #   OPENROUTER_API_KEY
 #   IG_ACCESS_TOKEN           — long-lived Instagram access token (60-day, from the Meta App
 #                                Dashboard's "Generate token" button — see docs/10-instagram-publishing-setup.md)
+#   CF_API_TOKEN              — Workers AI-scoped API token (My Profile -> API Tokens -> Create
+#                                Token -> "Workers AI" template), for AI creative image generation
