@@ -4,7 +4,8 @@ AI-powered social media content operating system — brand memory, bilingual (Ar
 generation, editorial workflow, analytics, and a provider-agnostic AI gateway. Architected to grow into
 a multi-tenant SaaS product.
 
-**Status: M0–M2 built, deployed and verified against real infrastructure.** Live at
+**Status: M0–M4 built, deployed and verified against real infrastructure; M5 (Instagram
+publishing) built and unit-tested, pending a live Meta app to verify end-to-end.** Live at
 **https://myaibrandstudio-dev.web.app** (dev environment). See
 [docs/04-roadmap-acceptance-criteria.md](docs/04-roadmap-acceptance-criteria.md) for what's next.
 
@@ -20,6 +21,7 @@ a multi-tenant SaaS product.
 8. [Cloudflare Worker (AI gateway) setup](docs/07-cloudflare-worker-setup.md)
 9. [Deploying the app (Hosting)](docs/08-hosting-deploy.md)
 10. [Asset library setup (Cloudinary)](docs/09-cloudinary-setup.md)
+11. [Instagram publishing setup](docs/10-instagram-publishing-setup.md)
 
 ## Project layout
 

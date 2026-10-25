@@ -58,6 +58,8 @@ export async function createDraftContentItem(
     status: "draft",
     history: [historyEntry],
     createdBy: uid,
+    imageUrl: null,
+    publishes: {},
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -84,6 +86,8 @@ export async function listContentItems(
       history: data.history ?? [],
       createdBy: data.createdBy,
       platformTargets: data.platformTargets ?? [],
+      imageUrl: data.imageUrl ?? null,
+      publishes: data.publishes ?? {},
     } satisfies ContentItem;
   });
 }
@@ -91,7 +95,8 @@ export async function listContentItems(
 const NEXT_STATUS: Record<ContentStatus, ContentStatus | null> = {
   draft: "in_review",
   in_review: "approved",
-  approved: null,
+  approved: null, // "published" is set only by a real publish call, never a manual transition
+  published: null,
 };
 
 export function nextStatus(current: ContentStatus): ContentStatus | null {
@@ -129,5 +134,25 @@ export async function transitionContentItem(
       history: [...item.history, historyEntry],
       updatedAt: serverTimestamp(),
     },
+  );
+}
+
+export async function attachImageToContentItem(
+  orgId: string,
+  brandId: string,
+  itemId: string,
+  imageUrl: string,
+): Promise<void> {
+  await updateDoc(
+    doc(
+      getFirebaseDb(),
+      "organizations",
+      orgId,
+      "brands",
+      brandId,
+      "contentItems",
+      itemId,
+    ),
+    { imageUrl, updatedAt: serverTimestamp() },
   );
 }

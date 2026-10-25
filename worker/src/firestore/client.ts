@@ -73,6 +73,15 @@ export interface FirestoreClient {
   ): Promise<void>;
   /** Sums `tokensIn + tokensOut` across documents in `collectionPath` where `date` equals `date`. */
   sumTokensForDate(collectionPath: string, date: string): Promise<number>;
+  /**
+   * Partial update: only `fieldPaths` are touched (dotted paths like "publishes.instagram" update
+   * just that nested key, leaving sibling keys alone — Firestore's updateMask semantics).
+   */
+  updateDocument(
+    path: string,
+    data: Record<string, unknown>,
+    fieldPaths: string[],
+  ): Promise<void>;
 }
 
 export function createFirestoreClient(
@@ -115,6 +124,21 @@ export function createFirestoreClient(
       if (!res.ok) {
         throw new Error(
           `Firestore createDocument(${collectionPath}) failed: ${res.status} ${await res.text()}`,
+        );
+      }
+    },
+
+    async updateDocument(path, data, fieldPaths) {
+      const mask = fieldPaths
+        .map((p) => `updateMask.fieldPaths=${encodeURIComponent(p)}`)
+        .join("&");
+      const res = await request(`${path}?${mask}`, {
+        method: "PATCH",
+        body: JSON.stringify({ fields: encodeFields(data) }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          `Firestore updateDocument(${path}) failed: ${res.status} ${await res.text()}`,
         );
       }
     },

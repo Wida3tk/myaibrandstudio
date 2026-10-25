@@ -1,9 +1,13 @@
 import { z } from "zod";
 
-// M3 scope: draft -> in_review -> approved. "scheduled"/"published" are reserved for M4/M5
-// (platform previews, publishing integrations) — the data model allows them, nothing here uses
-// them yet.
-export const contentStatusSchema = z.enum(["draft", "in_review", "approved"]);
+// M3 scope was draft -> in_review -> approved; M5 adds "published", set only after a real
+// publish call succeeds (see publishes below) — never a manual transition.
+export const contentStatusSchema = z.enum([
+  "draft",
+  "in_review",
+  "approved",
+  "published",
+]);
 export type ContentStatus = z.infer<typeof contentStatusSchema>;
 
 export const historyEntrySchema = z.object({
@@ -29,6 +33,15 @@ export type Platform = z.infer<typeof platformSchema>;
 
 export const PLATFORMS: Platform[] = ["instagram", "x", "linkedin", "tiktok"];
 
+// Set only by the publish Worker endpoint after Meta actually confirms the post is live —
+// never written by the client, so it's trustworthy evidence a publish really happened.
+export const publishRecordSchema = z.object({
+  mediaId: z.string(),
+  permalink: z.string(),
+  publishedAt: z.string(),
+});
+export type PublishRecord = z.infer<typeof publishRecordSchema>;
+
 export const contentItemSchema = z.object({
   id: z.string(),
   type: z.enum(["post", "hook", "caption", "script", "calendar-note"]),
@@ -39,5 +52,7 @@ export const contentItemSchema = z.object({
   history: z.array(historyEntrySchema),
   createdBy: z.string(),
   platformTargets: z.array(platformSchema),
+  imageUrl: z.string().nullable(),
+  publishes: z.record(z.string(), publishRecordSchema),
 });
 export type ContentItem = z.infer<typeof contentItemSchema>;

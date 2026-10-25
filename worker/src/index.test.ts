@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getGoogleAccessToken: vi.fn(),
   getDocument: vi.fn(),
   createDocument: vi.fn(),
+  updateDocument: vi.fn(),
   sumTokensForDate: vi.fn(),
 }));
 
@@ -20,6 +21,7 @@ vi.mock("./firestore/client.js", () => ({
   createFirestoreClient: () => ({
     getDocument: mocks.getDocument,
     createDocument: mocks.createDocument,
+    updateDocument: mocks.updateDocument,
     sumTokensForDate: mocks.sumTokensForDate,
   }),
 }));
@@ -36,10 +38,20 @@ const env = {
   GROQ_API_KEY: "groq-key",
   MISTRAL_API_KEY: "mistral-key",
   OPENROUTER_API_KEY: "openrouter-key",
+  IG_ACCESS_TOKEN: "ig-token",
+  IG_USER_ID: "ig-user-1",
 };
 
 function request(body: unknown, headers: Record<string, string> = {}) {
   return new Request("https://worker.example/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+}
+
+function publishRequest(body: unknown, headers: Record<string, string> = {}) {
+  return new Request("https://worker.example/publish/instagram", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
@@ -202,6 +214,124 @@ describe("worker fetch handler", () => {
     expect(mocks.createDocument).toHaveBeenCalledWith(
       `usage/org1/${expectedYyyymm}`,
       expect.objectContaining({ tokensIn: 10, tokensOut: 20 }),
+    );
+    vi.unstubAllGlobals();
+  });
+});
+
+const validPublishBody = {
+  orgId: "org1",
+  brandId: "brand1",
+  contentItemId: "item1",
+  imageUrl: "https://res.cloudinary.com/demo/image/upload/photo.jpg",
+  caption: "Check this out",
+};
+
+describe("worker fetch handler — /publish/instagram", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mocks.getGoogleAccessToken.mockResolvedValue("access-token");
+  });
+
+  it("returns 403 when the user is not an org member", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument.mockResolvedValue(null);
+    const res = await worker.fetch(
+      publishRequest(validPublishBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 when the content item doesn't exist", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" }) // member
+      .mockResolvedValueOnce(null); // content item
+    const res = await worker.fetch(
+      publishRequest(validPublishBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 502 when the Instagram call fails", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({ status: "approved", history: [] });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("nope", { status: 400 })),
+    );
+
+    const res = await worker.fetch(
+      publishRequest(validPublishBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(res.status).toBe(502);
+    vi.unstubAllGlobals();
+  });
+
+  it("returns 200 and updates the content item on success", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({ status: "approved", history: [] });
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith("/ig-user-1/media")) {
+        return new Response(JSON.stringify({ id: "container-1" }), {
+          status: 200,
+        });
+      }
+      if (url.includes("fields=status_code")) {
+        return new Response(JSON.stringify({ status_code: "FINISHED" }), {
+          status: 200,
+        });
+      }
+      if (url.endsWith("/ig-user-1/media_publish")) {
+        return new Response(JSON.stringify({ id: "media-1" }), {
+          status: 200,
+        });
+      }
+      if (url.includes("fields=permalink")) {
+        return new Response(
+          JSON.stringify({ permalink: "https://instagram.com/p/abc" }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await worker.fetch(
+      publishRequest(validPublishBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as {
+      mediaId: string;
+      permalink: string;
+    };
+    expect(payload).toEqual({
+      mediaId: "media-1",
+      permalink: "https://instagram.com/p/abc",
+    });
+    expect(mocks.updateDocument).toHaveBeenCalledWith(
+      "organizations/org1/brands/brand1/contentItems/item1",
+      expect.objectContaining({
+        status: "published",
+        publishes: {
+          instagram: expect.objectContaining({ mediaId: "media-1" }),
+        },
+      }),
+      ["status", "history", "publishes.instagram"],
     );
     vi.unstubAllGlobals();
   });

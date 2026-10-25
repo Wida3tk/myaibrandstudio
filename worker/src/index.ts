@@ -4,13 +4,20 @@ import {
   getGoogleAccessToken,
   type ServiceAccount,
 } from "./auth/service-account.js";
-import { createFirestoreClient } from "./firestore/client.js";
+import {
+  createFirestoreClient,
+  type FirestoreClient,
+} from "./firestore/client.js";
 import { generateWithFallback } from "./gateway/router.js";
 import { isWithinBudget } from "./gateway/budget.js";
 import { createGroqProvider } from "./gateway/providers/groq.js";
 import { createMistralProvider } from "./gateway/providers/mistral.js";
 import { createOpenRouterProvider } from "./gateway/providers/openrouter.js";
 import type { AIProvider } from "./gateway/types.js";
+import {
+  InstagramPublishError,
+  publishToInstagram,
+} from "./instagram/publish.js";
 
 export interface Env {
   FIREBASE_PROJECT_ID: string;
@@ -20,18 +27,28 @@ export interface Env {
   GROQ_API_KEY: string;
   MISTRAL_API_KEY: string;
   OPENROUTER_API_KEY: string;
+  IG_ACCESS_TOKEN: string;
+  IG_USER_ID: string;
 }
 
 // Conservative default; per-org configurable budgets are later work (see
 // docs/03-data-model.md's providerConfigs collection), not needed to ship a working v1.
 const DAILY_TOKEN_LIMIT = 50_000;
 
-const requestSchema = z.object({
+const generateRequestSchema = z.object({
   orgId: z.string().min(1),
   brandId: z.string().min(1),
   contentType: z.enum(["post", "hook", "caption", "script", "calendar-note"]),
   language: z.enum(["ar", "en"]),
   topic: z.string().trim().min(1).max(500),
+});
+
+const publishRequestSchema = z.object({
+  orgId: z.string().min(1),
+  brandId: z.string().min(1),
+  contentItemId: z.string().min(1),
+  imageUrl: z.string().url(),
+  caption: z.string().trim().min(1).max(2200),
 });
 
 function corsHeaders(
@@ -62,6 +79,195 @@ function json(
   });
 }
 
+async function handleGenerateContent(
+  request: Request,
+  env: Env,
+  uid: string,
+  firestore: FirestoreClient,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid-json" }, 400, headers);
+  }
+
+  const parsed = generateRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(
+      { error: "invalid-argument", message: parsed.error.issues[0]?.message },
+      400,
+      headers,
+    );
+  }
+  const { orgId, brandId, contentType, language, topic } = parsed.data;
+
+  const member = await firestore.getDocument(
+    `organizations/${orgId}/members/${uid}`,
+  );
+  if (!member) {
+    return json({ error: "permission-denied" }, 403, headers);
+  }
+
+  const brand = await firestore.getDocument(
+    `organizations/${orgId}/brands/${brandId}`,
+  );
+  if (!brand) {
+    return json({ error: "not-found" }, 404, headers);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const yyyymm = today.slice(0, 7).replace("-", "");
+  const usageCollectionPath = `usage/${orgId}/${yyyymm}`;
+
+  const tokensUsedToday = await firestore.sumTokensForDate(
+    usageCollectionPath,
+    today,
+  );
+  if (
+    !isWithinBudget({ tokensUsedToday }, { dailyTokenLimit: DAILY_TOKEN_LIMIT })
+  ) {
+    return json({ error: "resource-exhausted" }, 429, headers);
+  }
+
+  const brandDoc = brand as {
+    voice?: { tone?: string };
+    audience?: { description?: string };
+    memory?: { facts?: string[] };
+  };
+
+  const providers: AIProvider[] = [
+    createGroqProvider(env.GROQ_API_KEY),
+    createMistralProvider(env.MISTRAL_API_KEY),
+    createOpenRouterProvider(env.OPENROUTER_API_KEY),
+  ];
+
+  let result;
+  try {
+    result = await generateWithFallback(
+      {
+        orgId,
+        brandId,
+        contentType,
+        language,
+        brandVoice: brandDoc.voice?.tone ?? "",
+        brandAudience: brandDoc.audience?.description ?? "",
+        brandMemoryFacts: brandDoc.memory?.facts ?? [],
+        topic,
+      },
+      providers,
+    );
+  } catch (error) {
+    console.error("generateWithFallback failed", error);
+    return json({ error: "all-providers-failed" }, 502, headers);
+  }
+
+  await firestore.createDocument(usageCollectionPath, {
+    provider: result.provider,
+    model: result.model,
+    brandId,
+    contentType,
+    tokensIn: result.tokensIn,
+    tokensOut: result.tokensOut,
+    date: today,
+    createdAt: new Date().toISOString(),
+  });
+
+  return json(
+    { structured: result.structured, provider: result.provider },
+    200,
+    headers,
+  );
+}
+
+async function handleInstagramPublish(
+  request: Request,
+  env: Env,
+  uid: string,
+  firestore: FirestoreClient,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid-json" }, 400, headers);
+  }
+
+  const parsed = publishRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(
+      { error: "invalid-argument", message: parsed.error.issues[0]?.message },
+      400,
+      headers,
+    );
+  }
+  const { orgId, brandId, contentItemId, imageUrl, caption } = parsed.data;
+
+  const member = await firestore.getDocument(
+    `organizations/${orgId}/members/${uid}`,
+  );
+  if (!member) {
+    return json({ error: "permission-denied" }, 403, headers);
+  }
+
+  const itemPath = `organizations/${orgId}/brands/${brandId}/contentItems/${contentItemId}`;
+  const item = await firestore.getDocument(itemPath);
+  if (!item) {
+    return json({ error: "not-found" }, 404, headers);
+  }
+
+  let result;
+  try {
+    result = await publishToInstagram(
+      { accessToken: env.IG_ACCESS_TOKEN, igUserId: env.IG_USER_ID },
+      { imageUrl, caption },
+    );
+  } catch (error) {
+    console.error("publishToInstagram failed", error);
+    const message =
+      error instanceof InstagramPublishError
+        ? error.message
+        : "Instagram publish failed.";
+    return json({ error: "publish-failed", message }, 502, headers);
+  }
+
+  const publishedAt = new Date().toISOString();
+  const existingHistory = Array.isArray(item.history) ? item.history : [];
+
+  await firestore.updateDocument(
+    itemPath,
+    {
+      status: "published",
+      history: [
+        ...existingHistory,
+        {
+          uid,
+          action: "published_instagram",
+          fromStatus: (item.status as string) ?? null,
+          toStatus: "published",
+          at: publishedAt,
+        },
+      ],
+      publishes: {
+        instagram: {
+          mediaId: result.mediaId,
+          permalink: result.permalink,
+          publishedAt,
+        },
+      },
+    },
+    ["status", "history", "publishes.instagram"],
+  );
+
+  return json(
+    { mediaId: result.mediaId, permalink: result.permalink },
+    200,
+    headers,
+  );
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const headers = corsHeaders(
@@ -89,23 +295,6 @@ export default {
       return json({ error: "unauthenticated" }, 401, headers);
     }
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return json({ error: "invalid-json" }, 400, headers);
-    }
-
-    const parsed = requestSchema.safeParse(body);
-    if (!parsed.success) {
-      return json(
-        { error: "invalid-argument", message: parsed.error.issues[0]?.message },
-        400,
-        headers,
-      );
-    }
-    const { orgId, brandId, contentType, language, topic } = parsed.data;
-
     const serviceAccount = JSON.parse(
       env.GCP_SERVICE_ACCOUNT_JSON,
     ) as ServiceAccount;
@@ -118,84 +307,11 @@ export default {
       accessToken,
     );
 
-    const member = await firestore.getDocument(
-      `organizations/${orgId}/members/${uid}`,
-    );
-    if (!member) {
-      return json({ error: "permission-denied" }, 403, headers);
+    const { pathname } = new URL(request.url);
+    if (pathname === "/publish/instagram") {
+      return handleInstagramPublish(request, env, uid, firestore, headers);
     }
 
-    const brand = await firestore.getDocument(
-      `organizations/${orgId}/brands/${brandId}`,
-    );
-    if (!brand) {
-      return json({ error: "not-found" }, 404, headers);
-    }
-
-    const today = new Date().toISOString().slice(0, 10);
-    const yyyymm = today.slice(0, 7).replace("-", "");
-    const usageCollectionPath = `usage/${orgId}/${yyyymm}`;
-
-    const tokensUsedToday = await firestore.sumTokensForDate(
-      usageCollectionPath,
-      today,
-    );
-    if (
-      !isWithinBudget(
-        { tokensUsedToday },
-        { dailyTokenLimit: DAILY_TOKEN_LIMIT },
-      )
-    ) {
-      return json({ error: "resource-exhausted" }, 429, headers);
-    }
-
-    const brandDoc = brand as {
-      voice?: { tone?: string };
-      audience?: { description?: string };
-      memory?: { facts?: string[] };
-    };
-
-    const providers: AIProvider[] = [
-      createGroqProvider(env.GROQ_API_KEY),
-      createMistralProvider(env.MISTRAL_API_KEY),
-      createOpenRouterProvider(env.OPENROUTER_API_KEY),
-    ];
-
-    let result;
-    try {
-      result = await generateWithFallback(
-        {
-          orgId,
-          brandId,
-          contentType,
-          language,
-          brandVoice: brandDoc.voice?.tone ?? "",
-          brandAudience: brandDoc.audience?.description ?? "",
-          brandMemoryFacts: brandDoc.memory?.facts ?? [],
-          topic,
-        },
-        providers,
-      );
-    } catch (error) {
-      console.error("generateWithFallback failed", error);
-      return json({ error: "all-providers-failed" }, 502, headers);
-    }
-
-    await firestore.createDocument(usageCollectionPath, {
-      provider: result.provider,
-      model: result.model,
-      brandId,
-      contentType,
-      tokensIn: result.tokensIn,
-      tokensOut: result.tokensOut,
-      date: today,
-      createdAt: new Date().toISOString(),
-    });
-
-    return json(
-      { structured: result.structured, provider: result.provider },
-      200,
-      headers,
-    );
+    return handleGenerateContent(request, env, uid, firestore, headers);
   },
 } satisfies ExportedHandler<Env>;

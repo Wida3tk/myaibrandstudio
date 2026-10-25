@@ -58,6 +58,26 @@ describe("createFirestoreClient", () => {
     expect(result).toEqual({ role: "owner" });
   });
 
+  it("updateDocument PATCHes with an updateMask for just the given field paths", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createFirestoreClient("proj", "token");
+
+    await client.updateDocument(
+      "organizations/org1/brands/b1/contentItems/c1",
+      { status: "published", publishes: { instagram: { mediaId: "m1" } } },
+      ["status", "publishes.instagram"],
+    );
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      "https://firestore.googleapis.com/v1/projects/proj/databases/(default)/documents/organizations/org1/brands/b1/contentItems/c1?updateMask.fieldPaths=status&updateMask.fieldPaths=publishes.instagram",
+    );
+    expect(init.method).toBe("PATCH");
+  });
+
   it("createDocument POSTs encoded fields to the collection path", async () => {
     const fetchMock = vi
       .fn()

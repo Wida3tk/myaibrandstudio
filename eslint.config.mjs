@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // functions/ and worker/ are separate packages with their own eslint configs and build
+    // output (worker/dist is wrangler's bundled artifact, not source to lint).
+    "functions/**",
+    "worker/**",
   ]),
 ]);
 

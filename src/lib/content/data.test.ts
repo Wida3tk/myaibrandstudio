@@ -10,7 +10,11 @@ describe("nextStatus", () => {
     expect(nextStatus("in_review")).toBe("approved");
   });
 
-  it("approved is terminal", () => {
+  it("approved is terminal (published is set only by a real publish call)", () => {
     expect(nextStatus("approved")).toBeNull();
+  });
+
+  it("published is terminal", () => {
+    expect(nextStatus("published")).toBeNull();
   });
 });

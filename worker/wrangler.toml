@@ -6,8 +6,14 @@ compatibility_date = "2026-10-24"
 FIREBASE_PROJECT_ID = "myaibrandstudio-dev"
 ALLOWED_ORIGINS = "http://localhost:3000,https://myaibrandstudio-dev.web.app,https://myaibrandstudio-dev.firebaseapp.com"
 
+# IG_USER_ID is not a secret (just an account identifier, same category as FIREBASE_PROJECT_ID)
+# but isn't known until the Meta app is set up — add it here once it is:
+# IG_USER_ID = "..."
+
 # Secrets (never in this file — set via `wrangler secret put <NAME>`):
 #   GCP_SERVICE_ACCOUNT_JSON  — the full JSON key of a Firestore-scoped service account
 #   GROQ_API_KEY
 #   MISTRAL_API_KEY
 #   OPENROUTER_API_KEY
+#   IG_ACCESS_TOKEN           — long-lived Instagram access token (60-day, from the Meta App
+#                                Dashboard's "Generate token" button — see docs/10-instagram-publishing-setup.md)
