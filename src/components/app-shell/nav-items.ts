@@ -5,6 +5,8 @@ import {
   Image as ImageIcon,
   Building2,
   CalendarDays,
+  BarChart3,
+  Plug,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,4 +25,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/design", labelEn: "Design studio", labelAr: "استوديو التصميم", icon: Palette },
   { href: "/assets", labelEn: "Assets", labelAr: "الأصول", icon: ImageIcon },
   { href: "/brand", labelEn: "Brand hub", labelAr: "مركز العلامة", icon: Building2 },
+  { href: "/analytics", labelEn: "Analytics", labelAr: "التحليلات", icon: BarChart3 },
+  { href: "/integrations", labelEn: "Integrations", labelAr: "التكاملات", icon: Plug },
 ];
