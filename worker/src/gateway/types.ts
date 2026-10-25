@@ -11,6 +11,11 @@ export interface GenerationRequest {
   brandAudience: string;
   brandMemoryFacts: string[];
   topic: string;
+  /** Per-generation overrides layered onto the brand's defaults — all optional. */
+  toneOverride?: string;
+  audienceOverride?: string;
+  pillars?: string[];
+  customInstructions?: string;
 }
 
 export interface GenerationResult {

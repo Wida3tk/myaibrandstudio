@@ -24,7 +24,26 @@ describe("brandProfileSchema", () => {
       audienceDescription: "Young professionals",
       objectives: ["Grow awareness"],
       memoryFacts: ["Never use emoji"],
+      primaryColor: "#6750D8",
+      logoUrl: "https://res.cloudinary.com/demo/logo.png",
     });
     expect(result.success).toBe(true);
+  });
+
+  it("defaults primaryColor/logoUrl to empty strings", () => {
+    const result = brandProfileSchema.safeParse({ name: "Acme" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.primaryColor).toBe("");
+      expect(result.data.logoUrl).toBe("");
+    }
+  });
+
+  it("rejects a malformed primaryColor", () => {
+    const result = brandProfileSchema.safeParse({
+      name: "Acme",
+      primaryColor: "violet",
+    });
+    expect(result.success).toBe(false);
   });
 });

@@ -1,5 +1,11 @@
 # Phase 1 — Implementation Roadmap & Acceptance Criteria
 
+> **Note:** this is the original feature roadmap from Phase 1 planning. The premium visual
+> redesign (design system, app shell, per-page UI rebuilds) that shipped on
+> `feat/premium-studio-ui` is a separate, UI-focused initiative layered on top of the features
+> below — see [docs/11-premium-ui-overhaul.md](11-premium-ui-overhaul.md). It doesn't change any
+> of the acceptance criteria here; the underlying functionality this doc describes is preserved.
+
 Ordered by dependency, not by "importance" — later milestones need earlier ones to exist. Each
 milestone should land as its own set of small, reviewable PRs (per the engineering requirements), not
 one giant branch.

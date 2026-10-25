@@ -156,3 +156,24 @@ export async function attachImageToContentItem(
     { imageUrl, updatedAt: serverTimestamp() },
   );
 }
+
+/** Edits the generated text in place — not a status transition, so no history entry. */
+export async function updateContentItemPayload(
+  orgId: string,
+  brandId: string,
+  itemId: string,
+  structuredPayload: GeneratedContent,
+): Promise<void> {
+  await updateDoc(
+    doc(
+      getFirebaseDb(),
+      "organizations",
+      orgId,
+      "brands",
+      brandId,
+      "contentItems",
+      itemId,
+    ),
+    { structuredPayload, updatedAt: serverTimestamp() },
+  );
+}
