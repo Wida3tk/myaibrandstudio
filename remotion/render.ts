@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * The actual "rendering" leg of the video pipeline — genuinely separate from the Next.js app and
- * the Cloudflare Worker (see docs/14-video-pipeline-setup.md for why: rendering needs a headless
+ * the Cloudflare Worker (see docs/13-video-pipeline-architecture.md for why: rendering needs a headless
  * Chromium + real compute time, which neither Cloudflare Workers nor Firebase Hosting's static
  * export can run). Takes a ShortFormVideoProps JSON file (produced by the app from
  * /video/script + /creative/image + /video/voiceover) and renders a real MP4 via Remotion's
@@ -49,7 +49,7 @@ async function findFFmpeg(): Promise<string> {
       }
     }
     throw new Error(
-      "ffmpeg not found on PATH. Install it (see docs/14-video-pipeline-setup.md) and make sure it's on PATH for new processes.",
+      "ffmpeg not found on PATH. Install it (see docs/13-video-pipeline-architecture.md) and make sure it's on PATH for new processes.",
     );
   }
 }

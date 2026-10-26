@@ -4,7 +4,7 @@ const FPS = 30;
 
 /** Default Studio-preview props and the fixture the render smoke test uses. No imageUrl/
  * voiceoverUrl on any scene — this sandbox has no live provider credentials to generate real
- * ones (see docs/14-video-pipeline-setup.md), so this exercises the real gradient-background +
+ * ones (see docs/13-video-pipeline-architecture.md), so this exercises the real gradient-background +
  * silent-video fallback path end to end rather than faking AI output. */
 export const exampleProps: ShortFormVideoProps = {
   title: "Weekend Upskill",

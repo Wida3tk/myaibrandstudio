@@ -46,7 +46,7 @@ org per user. Paths below use `{curly}` for document IDs.
         selectedVariationId
         createdBy, createdAt, updatedAt
 
-    /videoProjects/{videoProjectId}               // AI video pipeline (docs/14) -- one brief, one scene-based script
+    /videoProjects/{videoProjectId}               // AI video pipeline (docs/13-video-pipeline-architecture.md) -- one brief, one scene-based script
         brief { objective, language, targetDurationSeconds, style, audienceOverride, customInstructions }
         title, logline, language, colorPalette
         scenes[] { order, durationSeconds, visualDescription, onScreenText, voiceoverLine, imageUrl, voiceoverUrl }

@@ -1,7 +1,7 @@
 // Real voiceover generation. Primary: Groq TTS (console.groq.com/docs/text-to-speech) — reuses
 // the SAME GROQ_API_KEY already configured for text generation, no new signup, and is the only
 // provider research found that is simultaneously free, no-card, bilingual Arabic+English, and
-// callable with plain fetch() from a Workers runtime (see docs/14-video-pipeline-setup.md).
+// callable with plain fetch() from a Workers runtime (see docs/13-video-pipeline-architecture.md).
 // Fallback: Cloudflare Workers AI `melotts` — same already-verified free/no-training account as
 // the Flux image model, but English-only (no Arabic voice), so it only ever covers English scripts.
 //

@@ -11,8 +11,9 @@ export type RenderScene = {
    * configured/available — renders a brand-colored gradient instead of faking an image. */
   imageUrl: string | null;
   onScreenText: string;
-  /** Spoken line for this scene, shown as a caption — and as the <Audio> track once voiceoverUrl
-   * is set (voiceover generation is not yet wired to a live provider, see docs/14). */
+  /** Spoken line for this scene, shown as a caption — and as the <Audio> track whenever
+   * voiceoverUrl is set (null when no provider was configured/available for this scene; see
+   * docs/13-video-pipeline-architecture.md). */
   voiceoverLine: string;
   voiceoverUrl: string | null;
 };
