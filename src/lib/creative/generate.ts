@@ -20,7 +20,9 @@ function requiredGatewayUrl(): string {
   return url;
 }
 
-async function authedPost<TBody extends object, TResult>(
+/** Shared by src/lib/video/generate.ts too — one gateway-auth/error-handling helper for every
+ * Worker JSON endpoint instead of duplicating it per pipeline. */
+export async function authedPost<TBody extends object, TResult>(
   path: string,
   body: TBody,
 ): Promise<TResult> {

@@ -7,6 +7,7 @@ import {
   CalendarDays,
   BarChart3,
   Plug,
+  Clapperboard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,6 +38,12 @@ export const NAV_ITEMS: NavItem[] = [
     labelEn: "Design studio",
     labelAr: "استوديو التصميم",
     icon: Palette,
+  },
+  {
+    href: "/video",
+    labelEn: "Video studio",
+    labelAr: "استوديو الفيديو",
+    icon: Clapperboard,
   },
   { href: "/assets", labelEn: "Assets", labelAr: "الأصول", icon: ImageIcon },
   {

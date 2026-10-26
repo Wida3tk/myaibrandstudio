@@ -46,7 +46,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type={asChild ? undefined : type}
         className={cn(
-          "inline-flex items-center rounded-[var(--radius-md)] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+          "inline-flex items-center rounded-[var(--radius-md)] font-medium transition-[color,background-color,border-color,transform] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100",
           VARIANT_CLASSES[variant],
           SIZE_CLASSES[size],
           className,
