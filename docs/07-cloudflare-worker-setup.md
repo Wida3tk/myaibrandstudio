@@ -51,6 +51,7 @@ npx wrangler secret put GCP_SERVICE_ACCOUNT_JSON   # paste the entire downloaded
 npx wrangler secret put GROQ_API_KEY
 npx wrangler secret put MISTRAL_API_KEY
 npx wrangler secret put OPENROUTER_API_KEY
+npx wrangler secret put CF_API_TOKEN               # optional — see §6
 npm run deploy
 ```
 
@@ -62,6 +63,30 @@ Put that in the Next.js app's `.env.local` as `NEXT_PUBLIC_AI_GATEWAY_URL`.
 `npm run dev` inside `worker/` runs it locally via `wrangler dev` (default `http://localhost:8787`).
 For secrets locally, create `worker/.dev.vars` (gitignored, same `KEY=value` format as `.env.local`)
 rather than using real `wrangler secret put` — that command only affects the deployed Worker.
+
+## 6. AI image generation (Creative Pipeline, optional)
+
+The AI Creative Director's automatic layout composer can generate real background images via
+**Cloudflare Workers AI** (`@cf/black-forest-labs/flux-1-schnell`) — the same account the Worker
+already runs on, no new signup. Verified free tier: 10,000 Neurons/day (resets 00:00 UTC), no card
+required, explicit no-training clause, commercial use allowed under the model's own license
+(see https://developers.cloudflare.com/workers-ai/platform/pricing/ and
+https://developers.cloudflare.com/workers-ai/privacy/, checked 2026-10-26).
+
+1. Set `CF_ACCOUNT_ID` in `wrangler.toml` (not a secret — see the dashboard sidebar or
+   `npx wrangler whoami`).
+2. Create an API token at **My Profile → API Tokens → Create Token → "Workers AI (Read/Edit)"
+   template**, then `npx wrangler secret put CF_API_TOKEN`.
+
+Without this configured, the pipeline still works end to end — the layout composer falls back to a
+solid/gradient background built from the brand's own color palette instead of a generated image, and
+the UI says so rather than pretending an image was generated.
+
+**Deliberately not wired in:** Pollinations.ai was researched as a possible second free image
+provider (no key, works today), but its own ToS/Privacy pages could not be verified for
+commercial-use and training terms during that research — see the `free-llm-api-advisor` skill's
+output from that session. Don't add it as a silent fallback for customer-facing ad generation
+without reading those terms first.
 
 ## Staying free
 

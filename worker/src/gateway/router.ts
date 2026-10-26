@@ -1,8 +1,4 @@
-import type {
-  AIProvider,
-  GenerationRequest,
-  GenerationResult,
-} from "./types.js";
+import type { AIProvider } from "./types.js";
 
 export interface ProviderAttempt {
   provider: string;
@@ -25,10 +21,10 @@ export class AllProvidersFailedError extends Error {
  * response, or a structured-output response that fails schema validation). Throws only once every
  * provider in the chain has failed.
  */
-export async function generateWithFallback(
-  req: GenerationRequest,
-  providers: AIProvider[],
-): Promise<GenerationResult> {
+export async function generateWithFallback<TReq, TRes>(
+  req: TReq,
+  providers: AIProvider<TReq, TRes>[],
+): Promise<TRes> {
   const attempts: ProviderAttempt[] = [];
 
   for (const provider of providers) {
