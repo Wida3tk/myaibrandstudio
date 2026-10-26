@@ -71,6 +71,17 @@ function creativeBriefRequest(
   });
 }
 
+function videoVoiceoverRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
+  return new Request("https://worker.example/video/voiceover", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+}
+
 function videoScriptRequest(
   body: unknown,
   headers: Record<string, string> = {},
@@ -348,6 +359,69 @@ describe("worker fetch handler — /video/script", () => {
     };
     expect(payload.script.title).toBe("Weekend Upskill");
     expect(payload.script.scenes).toHaveLength(2);
+    expect(payload.provider).toBe("groq");
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("worker fetch handler — /video/voiceover", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mocks.getGoogleAccessToken.mockResolvedValue("access-token");
+  });
+
+  it("returns available:false rather than an error when nothing is configured", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({});
+
+    const res = await worker.fetch(
+      videoVoiceoverRequest(
+        { orgId: "org1", brandId: "brand1", text: "hello", language: "en" },
+        { Authorization: "Bearer ok" },
+      ),
+      { ...env, GROQ_API_KEY: "", CF_ACCOUNT_ID: "", CF_API_TOKEN: "" },
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as {
+      available: boolean;
+      reason?: string;
+    };
+    expect(payload).toEqual({ available: false, reason: "unavailable" });
+  });
+
+  it("returns the generated voiceover on success", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({});
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(new Uint8Array([1, 2, 3]), { status: 200 }),
+        ),
+    );
+
+    const res = await worker.fetch(
+      videoVoiceoverRequest(
+        { orgId: "org1", brandId: "brand1", text: "hello", language: "en" },
+        { Authorization: "Bearer ok" },
+      ),
+      env,
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as {
+      available: boolean;
+      provider: string;
+    };
+    expect(payload.available).toBe(true);
     expect(payload.provider).toBe("groq");
     vi.unstubAllGlobals();
   });

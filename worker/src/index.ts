@@ -26,8 +26,15 @@ import {
 } from "./gateway/creative/image.js";
 import { reviseRequestSchema } from "./gateway/creative/revise-schema.js";
 import { createRevisionProviders } from "./gateway/creative/revise-providers.js";
-import { videoScriptRequestSchema } from "./gateway/video/schema.js";
+import {
+  videoScriptRequestSchema,
+  videoVoiceoverRequestSchema,
+} from "./gateway/video/schema.js";
 import { createVideoScriptProviders } from "./gateway/video/providers.js";
+import {
+  generateVoiceover,
+  VoiceoverProviderUnavailableError,
+} from "./gateway/video/voiceover.js";
 
 export interface Env {
   FIREBASE_PROJECT_ID: string;
@@ -460,6 +467,55 @@ async function handleCreativeImage(
   }
 }
 
+async function handleVideoVoiceover(
+  request: Request,
+  env: Env,
+  uid: string,
+  firestore: FirestoreClient,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid-json" }, 400, headers);
+  }
+
+  const parsed = videoVoiceoverRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(
+      { error: "invalid-argument", message: parsed.error.issues[0]?.message },
+      400,
+      headers,
+    );
+  }
+  const { orgId, brandId, text, language } = parsed.data;
+
+  const member = await firestore.getDocument(
+    `organizations/${orgId}/members/${uid}`,
+  );
+  if (!member) {
+    return json({ error: "permission-denied" }, 403, headers);
+  }
+  const brand = await firestore.getDocument(
+    `organizations/${orgId}/brands/${brandId}`,
+  );
+  if (!brand) {
+    return json({ error: "not-found" }, 404, headers);
+  }
+
+  try {
+    const voiceover = await generateVoiceover(env, text, language);
+    return json({ available: true, ...voiceover }, 200, headers);
+  } catch (error) {
+    if (error instanceof VoiceoverProviderUnavailableError) {
+      return json({ available: false, reason: "unavailable" }, 200, headers);
+    }
+    console.error("generateVoiceover failed", error);
+    return json({ available: false, reason: "failed" }, 200, headers);
+  }
+}
+
 async function handleCreativeRevise(
   request: Request,
   env: Env,
@@ -671,6 +727,9 @@ export default {
     }
     if (pathname === "/video/script") {
       return handleVideoScript(request, env, uid, firestore, headers);
+    }
+    if (pathname === "/video/voiceover") {
+      return handleVideoVoiceover(request, env, uid, firestore, headers);
     }
 
     return handleGenerateContent(request, env, uid, firestore, headers);

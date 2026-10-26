@@ -30,3 +30,10 @@ export const videoScriptSchema = z.object({
 });
 
 export type VideoScriptOutput = z.infer<typeof videoScriptSchema>;
+
+export const videoVoiceoverRequestSchema = z.object({
+  orgId: z.string().min(1),
+  brandId: z.string().min(1),
+  text: z.string().trim().min(1).max(400),
+  language: z.enum(["ar", "en"]),
+});
