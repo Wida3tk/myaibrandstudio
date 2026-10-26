@@ -38,6 +38,14 @@ org per user. Paths below use `{curly}` for document IDs.
     /templates/{templateId}
         name, basedOnAssetId, editableFields[]
 
+    /campaigns/{campaignId}                      // AI creative pipeline (docs/12) — one brief, many variations
+        brief { objective, platform, language, style, audienceOverride, requiredText, customInstructions }
+        spec                                     // validated AI creative-director output (worker/src/gateway/creative/schema.ts)
+        backgroundImageUrl                        // Cloudinary URL once the generated/fallback background is saved as an asset
+        variations[] { id, layoutVariant, fabricJson, previewDataUrl }
+        selectedVariationId
+        createdBy, createdAt, updatedAt
+
     /approvals/{approvalId}
         contentItemId, requestedBy, reviewers[]
         comments[] { uid, text, createdAt }

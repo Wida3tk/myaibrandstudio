@@ -12,6 +12,7 @@ import {
   Trash2,
   ZoomIn,
   ZoomOut,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useOrg } from "@/lib/org/use-org";
@@ -28,18 +29,36 @@ import {
   getTemplate,
   type TemplateObjectSpec,
 } from "@/lib/design/templates";
+import { composeLayout } from "@/lib/design/compose";
+import {
+  applyComposedSpecs,
+  LAYOUT_PROPERTIES_TO_INCLUDE,
+} from "@/lib/design/apply-layout";
+import { summarizeCanvas, applyEditOps } from "@/lib/design/revise";
+import { runCreativeDirector, buildDesignVariations } from "@/lib/creative/pipeline";
+import { createCampaign, selectCampaignVariation } from "@/lib/creative/data";
+import { generateRevisionOps } from "@/lib/creative/generate";
+import type {
+  CreativeBrief,
+  CreativeSpec,
+  DesignVariation,
+  LayoutVariant,
+} from "@/lib/creative/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Label, Select } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LayersPanel } from "@/components/design/layers-panel";
 import { TextPropertiesPanel } from "@/components/design/text-properties-panel";
+import { BriefDialog } from "@/components/creative/brief-dialog";
+import { VariationPicker } from "@/components/creative/variation-picker";
+import { RevisePanel } from "@/components/creative/revise-panel";
 
 const MAX_HISTORY = 50;
 
 export default function DesignPage() {
   const { user } = useAuth();
-  const { orgId } = useOrg();
+  const { orgId, brand } = useOrg();
   const { locale } = useLocale();
 
   const canvasElRef = useRef<HTMLCanvasElement>(null);
@@ -70,12 +89,30 @@ export default function DesignPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [pipelineStep, setPipelineStep] = useState<string | null>(null);
+  const [pipelineOutput, setPipelineOutput] = useState<{
+    spec: CreativeSpec;
+    backgroundImageUrl: string | null;
+    language: "ar" | "en";
+    variations: DesignVariation[];
+  } | null>(null);
+  const [campaignId, setCampaignId] = useState<string | null>(null);
+  const [activeCampaign, setActiveCampaign] = useState<{
+    spec: CreativeSpec;
+    backgroundImageUrl: string | null;
+    language: "ar" | "en";
+    variant: LayoutVariant;
+  } | null>(null);
+
   const bump = useCallback(() => setVersion((v) => v + 1), []);
 
   const pushHistory = useCallback(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
-    const json = JSON.stringify(canvas.toJSON());
+    // canvas.toJSON() takes no arguments (it's JSON.stringify's own hook) — toObject() is the
+    // call that accepts propertiesToInclude, needed so AI-layout role tags survive undo/redo.
+    const json = JSON.stringify(canvas.toObject(LAYOUT_PROPERTIES_TO_INCLUDE));
     const h = historyRef.current;
     const nextStack = [...h.stack.slice(0, h.index + 1), json].slice(
       -MAX_HISTORY,
@@ -245,9 +282,30 @@ export default function DesignPage() {
   function handleFormatChange(id: string) {
     setFormatId(id);
     const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
+    const fabric = fabricModuleRef.current;
+    if (!canvas || !fabric) return;
     const preset = getPreset(id);
     canvas.setDimensions({ width: preset.width, height: preset.height });
+
+    if (activeCampaign) {
+      // Multi-format output: re-run the same layout variant at the new dimensions instead of
+      // naively stretching the existing objects.
+      canvas
+        .getObjects()
+        .slice()
+        .forEach((o) => canvas.remove(o));
+      const specs = composeLayout(activeCampaign.variant, {
+        spec: activeCampaign.spec,
+        width: preset.width,
+        height: preset.height,
+        language: activeCampaign.language,
+        backgroundImageUrl: activeCampaign.backgroundImageUrl,
+        logoUrl: brand?.logoUrl ?? "",
+      });
+      applyComposedSpecs(canvas, fabric, specs).then(() => commit());
+      return;
+    }
+
     canvas.requestRenderAll();
     commit();
   }
@@ -279,6 +337,94 @@ export default function DesignPage() {
     );
     canvas.requestRenderAll();
     commit();
+  }
+
+  async function handleGenerateFromBrief(brief: CreativeBrief) {
+    if (!orgId || !user) return;
+    const preset = getPreset(brief.platform);
+    setPipelineStep(
+      locale === "ar" ? "جارٍ التوجيه الإبداعي..." : "Directing the creative...",
+    );
+    try {
+      const { spec, backgroundImageUrl } = await runCreativeDirector(
+        orgId,
+        PRIMARY_BRAND_ID,
+        user.uid,
+        brief,
+        { width: preset.width, height: preset.height },
+      );
+      setPipelineStep(
+        locale === "ar" ? "جارٍ تصميم 3 نسخ..." : "Composing 3 layouts...",
+      );
+      const variations = await buildDesignVariations(
+        spec,
+        { width: preset.width, height: preset.height },
+        brief.language,
+        backgroundImageUrl,
+        brand?.logoUrl ?? "",
+      );
+      setPipelineOutput({ spec, backgroundImageUrl, language: brief.language, variations });
+      setFormatId(brief.platform);
+      try {
+        // Persisting the campaign is for history/revisit — the 3 variations are already fully
+        // usable client-side, so a save failure (e.g. Firestore rules not yet deployed for this
+        // new collection) shouldn't block picking and editing one.
+        const id = await createCampaign(orgId, PRIMARY_BRAND_ID, user.uid, {
+          brief,
+          spec,
+          backgroundImageUrl,
+          variations,
+        });
+        setCampaignId(id);
+      } catch (err) {
+        console.error("Failed to save campaign (variations are still usable):", err);
+      }
+    } finally {
+      setPipelineStep(null);
+    }
+  }
+
+  async function handleApproveVariation(variation: DesignVariation) {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !pipelineOutput) return;
+    const preset = getPreset(formatId);
+    canvas.setDimensions({ width: preset.width, height: preset.height });
+    await canvas.loadFromJSON(variation.fabricJson);
+    canvas.requestRenderAll();
+    setActiveCampaign({
+      spec: pipelineOutput.spec,
+      backgroundImageUrl: pipelineOutput.backgroundImageUrl,
+      language: pipelineOutput.language,
+      variant: variation.layoutVariant,
+    });
+    setBackgroundColor(String(canvas.backgroundColor || "#ffffff"));
+    setSelectedObject(null);
+    bump();
+    historyRef.current = { stack: [], index: -1 };
+    pushHistory();
+    setSaved(false);
+    if (orgId && campaignId) {
+      await selectCampaignVariation(orgId, PRIMARY_BRAND_ID, campaignId, variation.id);
+    }
+    setPipelineOutput(null);
+  }
+
+  async function handleRevise(instruction: string): Promise<string[]> {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !orgId) return [];
+    const preset = getPreset(formatId);
+    const summary = summarizeCanvas(canvas);
+    const { ops } = await generateRevisionOps(
+      orgId,
+      PRIMARY_BRAND_ID,
+      instruction,
+      activeCampaign?.language ?? (locale === "ar" ? "ar" : "en"),
+      { width: preset.width, height: preset.height },
+      summary,
+    );
+    const applied = applyEditOps(canvas, ops);
+    if (applied.length > 0) commit();
+    return applied;
   }
 
   function handleAddText() {
@@ -440,6 +586,10 @@ export default function DesignPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button type="button" size="sm" onClick={() => setBriefOpen(true)}>
+            <Sparkles size={16} aria-hidden="true" />
+            {locale === "ar" ? "إنشاء بالذكاء الاصطناعي" : "Generate with AI"}
+          </Button>
           <Button
             type="button"
             variant="secondary"
@@ -491,6 +641,46 @@ export default function DesignPage() {
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      <BriefDialog
+        open={briefOpen}
+        onOpenChange={setBriefOpen}
+        brand={brand}
+        defaultLanguage={locale === "ar" ? "ar" : "en"}
+        onGenerate={handleGenerateFromBrief}
+      />
+
+      {pipelineStep && (
+        <Card>
+          <CardContent className="flex items-center gap-2 text-sm text-text-muted">
+            <Skeleton className="h-4 w-4 rounded-full" />
+            {pipelineStep}
+          </CardContent>
+        </Card>
+      )}
+
+      {pipelineOutput && (
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <div>
+              <h2 className="text-sm font-medium text-text">
+                {locale === "ar"
+                  ? "اختر إحدى النسخ الثلاث"
+                  : "Choose one of the 3 variations"}
+              </h2>
+              <p className="text-xs text-text-muted">
+                {locale === "ar"
+                  ? "يمكنك تعديل أي نسخة يدويًا أو بالذكاء الاصطناعي بعد الاعتماد."
+                  : "You can still edit the approved one manually or with AI afterwards."}
+              </p>
+            </div>
+            <VariationPicker
+              variations={pipelineOutput.variations}
+              onApprove={handleApproveVariation}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[14rem_1fr_16rem]">
         <Card className="h-fit">
@@ -680,6 +870,8 @@ export default function DesignPage() {
                 onChange={bump}
               />
             )}
+
+            {activeCampaign && <RevisePanel onRevise={handleRevise} />}
           </CardContent>
         </Card>
       </div>
