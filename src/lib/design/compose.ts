@@ -80,7 +80,9 @@ function textDirection(language: "ar" | "en") {
 }
 
 function paletteOrDefault(spec: CreativeSpec): string[] {
-  return spec.colorPalette.length >= 2 ? spec.colorPalette : ["#1E2440", "#6750D8"];
+  return spec.colorPalette.length >= 2
+    ? spec.colorPalette
+    : ["#1E2440", "#6750D8"];
 }
 
 /** Scales a font size off the canvas's smaller dimension, not just width — a LinkedIn post
@@ -428,7 +430,10 @@ function buildMinimal({
   return specs;
 }
 
-const BUILDERS: Record<LayoutVariant, (input: ComposeInput) => ComposedObjectSpec[]> = {
+const BUILDERS: Record<
+  LayoutVariant,
+  (input: ComposeInput) => ComposedObjectSpec[]
+> = {
   editorial: buildEditorial,
   bold: buildBold,
   minimal: buildMinimal,

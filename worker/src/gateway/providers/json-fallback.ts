@@ -31,8 +31,18 @@ export function createJSONProviders<TReq, TParsed>(
   schema: ZodType<TParsed>,
 ): AIProvider<TReq, JSONCompletion<TParsed>>[] {
   const configs = [
-    { id: "groq", baseUrl: GROQ_BASE_URL, model: GROQ_MODEL, apiKey: env.GROQ_API_KEY },
-    { id: "mistral", baseUrl: MISTRAL_BASE_URL, model: MISTRAL_MODEL, apiKey: env.MISTRAL_API_KEY },
+    {
+      id: "groq",
+      baseUrl: GROQ_BASE_URL,
+      model: GROQ_MODEL,
+      apiKey: env.GROQ_API_KEY,
+    },
+    {
+      id: "mistral",
+      baseUrl: MISTRAL_BASE_URL,
+      model: MISTRAL_MODEL,
+      apiKey: env.MISTRAL_API_KEY,
+    },
     {
       id: "openrouter",
       baseUrl: OPENROUTER_BASE_URL,
@@ -49,7 +59,13 @@ export function createJSONProviders<TReq, TParsed>(
         buildPrompt(req),
         schema,
       );
-      return { parsed, provider: config.id, model: config.model, tokensIn, tokensOut };
+      return {
+        parsed,
+        provider: config.id,
+        model: config.model,
+        tokensIn,
+        tokensOut,
+      };
     },
   }));
 }

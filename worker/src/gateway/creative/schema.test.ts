@@ -33,9 +33,16 @@ describe("creativeSpecSchema", () => {
     cta: "Enroll now",
     visualDirection: "Warm, premium editorial photography",
     colorPalette: ["#6750D8", "#F8F6F2"],
-    imagePrompts: ["A warm, softly lit desk with a laptop and coffee, editorial photography"],
-    layoutComposition: "Full-bleed background, headline lower third, logo top-right",
-    typographyHierarchy: { headline: "bold, large", body: "regular, medium", cta: "bold, pill button" },
+    imagePrompts: [
+      "A warm, softly lit desk with a laptop and coffee, editorial photography",
+    ],
+    layoutComposition:
+      "Full-bleed background, headline lower third, logo top-right",
+    typographyHierarchy: {
+      headline: "bold, large",
+      body: "regular, medium",
+      cta: "bold, pill button",
+    },
     platformDimensions: { width: 1080, height: 1080 },
     brandConstraints: ["Always show the logo"],
   };

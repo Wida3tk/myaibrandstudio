@@ -6,10 +6,19 @@ import {
   LAYOUT_PROPERTIES_TO_INCLUDE,
   stripUndefinedDeep,
 } from "@/lib/design/apply-layout";
-import { LAYOUT_VARIANTS, type CreativeBrief, type CreativeSpec, type DesignVariation } from "./types";
+import {
+  LAYOUT_VARIANTS,
+  type CreativeBrief,
+  type CreativeSpec,
+  type DesignVariation,
+} from "./types";
 import { generateBackgroundImage, generateCreativeSpec } from "./generate";
 
-function base64ToFile(base64: string, mimeType: string, filename: string): File {
+function base64ToFile(
+  base64: string,
+  mimeType: string,
+  filename: string,
+): File {
   const bytes = atob(base64);
   const buffer = new Uint8Array(bytes.length);
   for (let i = 0; i < bytes.length; i++) buffer[i] = bytes.charCodeAt(i);
@@ -32,7 +41,12 @@ export async function runCreativeDirector(
   brief: CreativeBrief,
   dimensions: { width: number; height: number },
 ): Promise<PipelineResult> {
-  const { spec } = await generateCreativeSpec(orgId, brandId, brief, dimensions);
+  const { spec } = await generateCreativeSpec(
+    orgId,
+    brandId,
+    brief,
+    dimensions,
+  );
 
   const imagePrompt = spec.imagePrompts[0];
   if (!imagePrompt) {
@@ -44,7 +58,11 @@ export async function runCreativeDirector(
     return { spec, backgroundImageUrl: null, imageProviderAvailable: false };
   }
 
-  const file = base64ToFile(image.base64, image.mimeType, `creative-bg-${Date.now()}.jpg`);
+  const file = base64ToFile(
+    image.base64,
+    image.mimeType,
+    `creative-bg-${Date.now()}.jpg`,
+  );
   const uploaded = await uploadToCloudinary(file);
   await createAsset(orgId, brandId, uid, {
     url: uploaded.url,
@@ -52,7 +70,11 @@ export async function runCreativeDirector(
     kind: "image",
   });
 
-  return { spec, backgroundImageUrl: uploaded.url, imageProviderAvailable: true };
+  return {
+    spec,
+    backgroundImageUrl: uploaded.url,
+    imageProviderAvailable: true,
+  };
 }
 
 /** Step 4+5: renders all 3 layout variants off-screen and returns them as selectable thumbnails —
@@ -86,7 +108,9 @@ export async function buildDesignVariations(
     variations.push({
       id: `${variant}-${Date.now()}`,
       layoutVariant: variant,
-      fabricJson: stripUndefinedDeep(canvas.toObject(LAYOUT_PROPERTIES_TO_INCLUDE)),
+      fabricJson: stripUndefinedDeep(
+        canvas.toObject(LAYOUT_PROPERTIES_TO_INCLUDE),
+      ),
       previewDataUrl: canvas.toDataURL({ format: "png", multiplier: 1 }),
     });
     await canvas.dispose();

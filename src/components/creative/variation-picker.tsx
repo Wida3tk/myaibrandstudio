@@ -36,7 +36,11 @@ export function VariationPicker({
               <span className="text-sm font-medium text-text">
                 {VARIANT_LABEL[variation.layoutVariant][locale]}
               </span>
-              <Button type="button" size="sm" onClick={() => onApprove(variation)}>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onApprove(variation)}
+              >
                 <Check size={14} aria-hidden="true" />
                 {locale === "ar" ? "اعتماد" : "Use this"}
               </Button>

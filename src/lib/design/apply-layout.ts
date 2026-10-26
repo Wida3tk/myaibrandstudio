@@ -137,7 +137,9 @@ export async function applyComposedSpecs(
             // Fabric stores whatever is passed here as an own property, including `undefined` —
             // and Firestore's addDoc rejects any undefined value nested in the saved fabricJson,
             // so this key must be omitted entirely rather than set to undefined.
-            ...(spec.backgroundColor ? { backgroundColor: spec.backgroundColor } : {}),
+            ...(spec.backgroundColor
+              ? { backgroundColor: spec.backgroundColor }
+              : {}),
             lineHeight: spec.lineHeight ?? 1.16,
           }),
           spec.role,

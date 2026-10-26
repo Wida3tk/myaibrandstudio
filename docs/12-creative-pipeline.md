@@ -69,7 +69,7 @@ and multi-format recompose (§7) use to target elements without knowing pixel co
 picker's thumbnails; nothing touches the interactive canvas until the user approves one.
 
 **Fabric v7 gotcha hit during QA**: this Fabric version defaults every object's origin to its
-*center*, not top-left (a breaking change from older Fabric majors) — every object `apply-layout.ts`
+_center_, not top-left (a breaking change from older Fabric majors) — every object `apply-layout.ts`
 creates now pins `originX/originY: "left"/"top"` explicitly, or `left`/`top` silently become the
 object's center point instead of its corner.
 

@@ -11,7 +11,15 @@ describe("reviseRequestSchema", () => {
       canvasWidth: 1080,
       canvasHeight: 1080,
       objects: [
-        { role: "headline", type: "textbox", text: "Hello", left: 0, top: 0, width: 100, height: 40 },
+        {
+          role: "headline",
+          type: "textbox",
+          text: "Hello",
+          left: 0,
+          top: 0,
+          width: 100,
+          height: 40,
+        },
       ],
     });
     expect(result.success).toBe(true);
@@ -28,7 +36,13 @@ describe("reviseResponseSchema", () => {
 
   it("rejects an op with a prop outside the allowlist", () => {
     const result = reviseResponseSchema.safeParse({
-      ops: [{ role: "headline", action: "set", props: { src: "https://evil.example/x.js" } }],
+      ops: [
+        {
+          role: "headline",
+          action: "set",
+          props: { src: "https://evil.example/x.js" },
+        },
+      ],
     });
     expect(result.success).toBe(false);
   });

@@ -34,7 +34,12 @@ export const creativeSpecSchema = z.object({
   cta: z.string().trim().min(1).max(40),
   visualDirection: z.string().trim().min(1).max(500),
   colorPalette: z
-    .array(z.string().trim().regex(/^#[0-9a-fA-F]{6}$/))
+    .array(
+      z
+        .string()
+        .trim()
+        .regex(/^#[0-9a-fA-F]{6}$/),
+    )
     .min(2)
     .max(6),
   imagePrompts: z.array(z.string().trim().min(1).max(400)).min(1).max(3),
@@ -48,7 +53,10 @@ export const creativeSpecSchema = z.object({
     width: z.number().int().positive(),
     height: z.number().int().positive(),
   }),
-  brandConstraints: z.array(z.string().trim().min(1).max(200)).max(10).default([]),
+  brandConstraints: z
+    .array(z.string().trim().min(1).max(200))
+    .max(10)
+    .default([]),
 });
 
 export type CreativeSpecOutput = z.infer<typeof creativeSpecSchema>;

@@ -24,7 +24,8 @@ export function buildCreativePrompt(req: CreativeBriefRequest): {
     `Brand: ${req.brandName}`,
     req.brandVoice && `Brand voice: ${req.brandVoice}`,
     req.brandAudience && `Audience: ${req.brandAudience}`,
-    req.audienceOverride && `Audience for this campaign: ${req.audienceOverride}`,
+    req.audienceOverride &&
+      `Audience for this campaign: ${req.audienceOverride}`,
     req.brandMemoryFacts.length > 0 &&
       `Brand rules (must follow): ${req.brandMemoryFacts.join("; ")}`,
     req.brandPrimaryColor && `Brand primary color: ${req.brandPrimaryColor}`,
@@ -34,7 +35,8 @@ export function buildCreativePrompt(req: CreativeBriefRequest): {
     req.style && `Visual style direction: ${req.style}`,
     req.requiredText &&
       `Text that MUST appear verbatim somewhere in the copy: ${req.requiredText}`,
-    req.customInstructions && `Additional instructions (must follow): ${req.customInstructions}`,
+    req.customInstructions &&
+      `Additional instructions (must follow): ${req.customInstructions}`,
     `platformDimensions in your response must be exactly {"width": ${req.width}, "height": ${req.height}}.`,
   ]
     .filter(Boolean)

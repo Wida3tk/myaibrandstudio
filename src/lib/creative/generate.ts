@@ -47,7 +47,10 @@ async function authedPost<TBody extends object, TResult>(
     const code = KNOWN_CODES.includes(responseBody.error as GenerationErrorCode)
       ? (responseBody.error as GenerationErrorCode)
       : "unknown";
-    throw new GenerationError(code, responseBody.message ?? "Generation failed.");
+    throw new GenerationError(
+      code,
+      responseBody.message ?? "Generation failed.",
+    );
   }
 
   return (await res.json()) as TResult;

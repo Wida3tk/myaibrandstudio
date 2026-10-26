@@ -41,7 +41,11 @@ export interface CreativeSpec {
 
 export type LayoutVariant = "editorial" | "bold" | "minimal";
 
-export const LAYOUT_VARIANTS: LayoutVariant[] = ["editorial", "bold", "minimal"];
+export const LAYOUT_VARIANTS: LayoutVariant[] = [
+  "editorial",
+  "bold",
+  "minimal",
+];
 
 export interface DesignVariation {
   id: string;

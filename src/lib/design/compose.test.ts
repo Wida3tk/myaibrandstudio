@@ -57,7 +57,10 @@ describe("composeLayout", () => {
   });
 
   it("includes a logo object only when a logo URL is given", () => {
-    const withLogo = composeLayout("bold", baseInput({ logoUrl: "https://example.com/logo.png" }));
+    const withLogo = composeLayout(
+      "bold",
+      baseInput({ logoUrl: "https://example.com/logo.png" }),
+    );
     const withoutLogo = composeLayout("bold", baseInput());
     expect(withLogo.some((s) => s.role === "logo")).toBe(true);
     expect(withoutLogo.some((s) => s.role === "logo")).toBe(false);
@@ -70,7 +73,8 @@ describe("composeLayout", () => {
       const cta = specs.find((s) => s.role === "cta");
       expect(headline?.type).toBe("textbox");
       expect(cta?.type).toBe("textbox");
-      if (headline?.type === "textbox") expect(headline.text).toContain(baseSpec.headline);
+      if (headline?.type === "textbox")
+        expect(headline.text).toContain(baseSpec.headline);
       if (cta?.type === "textbox") expect(cta.text).toContain(baseSpec.cta);
     }
   });
@@ -87,7 +91,8 @@ describe("composeLayout", () => {
 
   it("produces three distinct compositions, not just a palette swap", () => {
     const roleSets = LAYOUT_VARIANTS.map(
-      (variant) => new Set(composeLayout(variant, baseInput()).map((s) => s.role)),
+      (variant) =>
+        new Set(composeLayout(variant, baseInput()).map((s) => s.role)),
     );
     const [editorial, bold, minimal] = roleSets;
     expect(editorial).not.toEqual(bold);

@@ -18,12 +18,14 @@ describe("generateBackgroundImage", () => {
   it("returns the decoded image on success", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify({ success: true, result: { image: "base64data" } }),
-          { status: 200 },
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            JSON.stringify({ success: true, result: { image: "base64data" } }),
+            { status: 200 },
+          ),
         ),
-      ),
     );
 
     const result = await generateBackgroundImage(
@@ -42,14 +44,20 @@ describe("generateBackgroundImage", () => {
       "fetch",
       vi.fn().mockResolvedValue(
         new Response(
-          JSON.stringify({ success: false, errors: [{ message: "bad prompt" }] }),
+          JSON.stringify({
+            success: false,
+            errors: [{ message: "bad prompt" }],
+          }),
           { status: 200 },
         ),
       ),
     );
 
     await expect(
-      generateBackgroundImage({ CF_ACCOUNT_ID: "acc1", CF_API_TOKEN: "tok1" }, "a cat"),
+      generateBackgroundImage(
+        { CF_ACCOUNT_ID: "acc1", CF_API_TOKEN: "tok1" },
+        "a cat",
+      ),
     ).rejects.toThrow(/bad prompt/);
   });
 
@@ -60,7 +68,10 @@ describe("generateBackgroundImage", () => {
     );
 
     await expect(
-      generateBackgroundImage({ CF_ACCOUNT_ID: "acc1", CF_API_TOKEN: "tok1" }, "a cat"),
+      generateBackgroundImage(
+        { CF_ACCOUNT_ID: "acc1", CF_API_TOKEN: "tok1" },
+        "a cat",
+      ),
     ).rejects.toThrow(/500/);
   });
 });

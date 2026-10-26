@@ -9,7 +9,12 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
-import type { Campaign, CreativeBrief, CreativeSpec, DesignVariation } from "./types";
+import type {
+  Campaign,
+  CreativeBrief,
+  CreativeSpec,
+  DesignVariation,
+} from "./types";
 
 function campaignsCollection(orgId: string, brandId: string) {
   return collection(

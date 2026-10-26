@@ -5,7 +5,13 @@ import { Sparkles, AlertTriangle } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FieldGroup, Label, Select, Input, Textarea } from "@/components/ui/input";
+import {
+  FieldGroup,
+  Label,
+  Select,
+  Input,
+  Textarea,
+} from "@/components/ui/input";
 import type { BrandProfileInput } from "@/lib/brand/schema";
 import { FORMAT_PRESETS } from "@/lib/design/presets";
 import type { Language } from "@/lib/ai/types";
@@ -81,7 +87,9 @@ export function BriefDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="w-[min(92vw,34rem)]"
-        title={locale === "ar" ? "إنشاء تصميم بالذكاء الاصطناعي" : "Generate with AI"}
+        title={
+          locale === "ar" ? "إنشاء تصميم بالذكاء الاصطناعي" : "Generate with AI"
+        }
         description={
           locale === "ar"
             ? "صف ما تريده — سيتولى الذكاء الاصطناعي الاستراتيجية والنصوص والصورة والتخطيط."
@@ -154,14 +162,18 @@ export function BriefDialog({
               onChange={(e) => setAudienceOverride(e.target.value)}
               placeholder={
                 brand?.audienceDescription ||
-                (locale === "ar" ? "جمهور العلامة الافتراضي" : "Defaults to your brand audience")
+                (locale === "ar"
+                  ? "جمهور العلامة الافتراضي"
+                  : "Defaults to your brand audience")
               }
             />
           </FieldGroup>
 
           <FieldGroup>
             <Label htmlFor="required-text">
-              {locale === "ar" ? "نص لا بد أن يظهر (اختياري)" : "Required text (optional)"}
+              {locale === "ar"
+                ? "نص لا بد أن يظهر (اختياري)"
+                : "Required text (optional)"}
             </Label>
             <Input
               id="required-text"
@@ -175,7 +187,9 @@ export function BriefDialog({
 
           <FieldGroup>
             <Label htmlFor="instructions">
-              {locale === "ar" ? "تعليمات إضافية (اختياري)" : "Custom instructions (optional)"}
+              {locale === "ar"
+                ? "تعليمات إضافية (اختياري)"
+                : "Custom instructions (optional)"}
             </Label>
             <Textarea
               id="instructions"
@@ -187,7 +201,11 @@ export function BriefDialog({
 
           {error && (
             <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-danger/30 bg-danger-soft p-3 text-sm text-danger">
-              <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <AlertTriangle
+                size={16}
+                className="mt-0.5 shrink-0"
+                aria-hidden="true"
+              />
               <span>{error}</span>
             </div>
           )}

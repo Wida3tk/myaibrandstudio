@@ -35,7 +35,10 @@ import {
   LAYOUT_PROPERTIES_TO_INCLUDE,
 } from "@/lib/design/apply-layout";
 import { summarizeCanvas, applyEditOps } from "@/lib/design/revise";
-import { runCreativeDirector, buildDesignVariations } from "@/lib/creative/pipeline";
+import {
+  runCreativeDirector,
+  buildDesignVariations,
+} from "@/lib/creative/pipeline";
 import { createCampaign, selectCampaignVariation } from "@/lib/creative/data";
 import { generateRevisionOps } from "@/lib/creative/generate";
 import type {
@@ -343,7 +346,9 @@ export default function DesignPage() {
     if (!orgId || !user) return;
     const preset = getPreset(brief.platform);
     setPipelineStep(
-      locale === "ar" ? "جارٍ التوجيه الإبداعي..." : "Directing the creative...",
+      locale === "ar"
+        ? "جارٍ التوجيه الإبداعي..."
+        : "Directing the creative...",
     );
     try {
       const { spec, backgroundImageUrl } = await runCreativeDirector(
@@ -363,7 +368,12 @@ export default function DesignPage() {
         backgroundImageUrl,
         brand?.logoUrl ?? "",
       );
-      setPipelineOutput({ spec, backgroundImageUrl, language: brief.language, variations });
+      setPipelineOutput({
+        spec,
+        backgroundImageUrl,
+        language: brief.language,
+        variations,
+      });
       setFormatId(brief.platform);
       try {
         // Persisting the campaign is for history/revisit — the 3 variations are already fully
@@ -377,7 +387,10 @@ export default function DesignPage() {
         });
         setCampaignId(id);
       } catch (err) {
-        console.error("Failed to save campaign (variations are still usable):", err);
+        console.error(
+          "Failed to save campaign (variations are still usable):",
+          err,
+        );
       }
     } finally {
       setPipelineStep(null);
@@ -404,7 +417,12 @@ export default function DesignPage() {
     pushHistory();
     setSaved(false);
     if (orgId && campaignId) {
-      await selectCampaignVariation(orgId, PRIMARY_BRAND_ID, campaignId, variation.id);
+      await selectCampaignVariation(
+        orgId,
+        PRIMARY_BRAND_ID,
+        campaignId,
+        variation.id,
+      );
     }
     setPipelineOutput(null);
   }

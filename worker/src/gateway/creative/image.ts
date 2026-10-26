@@ -45,7 +45,9 @@ export async function generateBackgroundImage(
   );
 
   if (!res.ok) {
-    throw new Error(`Workers AI image request failed: ${res.status} ${await res.text()}`);
+    throw new Error(
+      `Workers AI image request failed: ${res.status} ${await res.text()}`,
+    );
   }
 
   const data = (await res.json()) as CloudflareAIImageResponse;
@@ -55,5 +57,9 @@ export async function generateBackgroundImage(
     );
   }
 
-  return { base64: data.result.image, mimeType: "image/jpeg", provider: "cloudflare-workers-ai" };
+  return {
+    base64: data.result.image,
+    mimeType: "image/jpeg",
+    provider: "cloudflare-workers-ai",
+  };
 }

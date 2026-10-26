@@ -409,7 +409,10 @@ async function handleCreativeRevise(
 
   let result;
   try {
-    result = await generateWithFallback(parsed.data, createRevisionProviders(env));
+    result = await generateWithFallback(
+      parsed.data,
+      createRevisionProviders(env),
+    );
   } catch (error) {
     console.error("creative revision generateWithFallback failed", error);
     return json({ error: "all-providers-failed" }, 502, headers);

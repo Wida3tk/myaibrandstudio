@@ -275,7 +275,9 @@ describe("worker fetch handler — /creative/brief", () => {
     mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
     mocks.getDocument.mockResolvedValue(null);
     const res = await worker.fetch(
-      creativeBriefRequest(validCreativeBriefBody, { Authorization: "Bearer ok" }),
+      creativeBriefRequest(validCreativeBriefBody, {
+        Authorization: "Bearer ok",
+      }),
       env,
       {} as ExecutionContext,
     );
@@ -303,7 +305,11 @@ describe("worker fetch handler — /creative/brief", () => {
       colorPalette: ["#6750D8", "#F8F6F2"],
       imagePrompts: ["A warm, softly lit desk, editorial photography"],
       layoutComposition: "Full-bleed background, headline lower third",
-      typographyHierarchy: { headline: "bold", body: "regular", cta: "bold pill" },
+      typographyHierarchy: {
+        headline: "bold",
+        body: "regular",
+        cta: "bold pill",
+      },
       platformDimensions: { width: 1, height: 1 }, // the handler must override this with the request's own size
       brandConstraints: [],
     };
@@ -315,22 +321,32 @@ describe("worker fetch handler — /creative/brief", () => {
       "fetch",
       vi
         .fn()
-        .mockResolvedValue(new Response(JSON.stringify(providerResponse), { status: 200 })),
+        .mockResolvedValue(
+          new Response(JSON.stringify(providerResponse), { status: 200 }),
+        ),
     );
 
     const res = await worker.fetch(
-      creativeBriefRequest(validCreativeBriefBody, { Authorization: "Bearer ok" }),
+      creativeBriefRequest(validCreativeBriefBody, {
+        Authorization: "Bearer ok",
+      }),
       env,
       {} as ExecutionContext,
     );
 
     expect(res.status).toBe(200);
     const payload = (await res.json()) as {
-      spec: { headline: string; platformDimensions: { width: number; height: number } };
+      spec: {
+        headline: string;
+        platformDimensions: { width: number; height: number };
+      };
       provider: string;
     };
     expect(payload.spec.headline).toBe("New course, new you");
-    expect(payload.spec.platformDimensions).toEqual({ width: 1080, height: 1080 });
+    expect(payload.spec.platformDimensions).toEqual({
+      width: 1080,
+      height: 1080,
+    });
     expect(payload.provider).toBe("groq");
     vi.unstubAllGlobals();
   });
@@ -344,7 +360,9 @@ describe("worker fetch handler — /creative/image", () => {
 
   it("returns available:false rather than an error when the image provider is unconfigured", async () => {
     mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
-    mocks.getDocument.mockResolvedValueOnce({ role: "owner" }).mockResolvedValueOnce({});
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({});
 
     const res = await worker.fetch(
       creativeImageRequest(
@@ -356,19 +374,27 @@ describe("worker fetch handler — /creative/image", () => {
     );
 
     expect(res.status).toBe(200);
-    const payload = (await res.json()) as { available: boolean; reason?: string };
+    const payload = (await res.json()) as {
+      available: boolean;
+      reason?: string;
+    };
     expect(payload).toEqual({ available: false, reason: "unavailable" });
   });
 
   it("returns the generated image on success", async () => {
     mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
-    mocks.getDocument.mockResolvedValueOnce({ role: "owner" }).mockResolvedValueOnce({});
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({});
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ success: true, result: { image: "b64" } }), {
-          status: 200,
-        }),
+        new Response(
+          JSON.stringify({ success: true, result: { image: "b64" } }),
+          {
+            status: 200,
+          },
+        ),
       ),
     );
 
@@ -382,7 +408,10 @@ describe("worker fetch handler — /creative/image", () => {
     );
 
     expect(res.status).toBe(200);
-    const payload = (await res.json()) as { available: boolean; base64: string };
+    const payload = (await res.json()) as {
+      available: boolean;
+      base64: string;
+    };
     expect(payload).toEqual({
       available: true,
       base64: "b64",
@@ -401,7 +430,15 @@ const validReviseBody = {
   canvasWidth: 1080,
   canvasHeight: 1080,
   objects: [
-    { role: "headline", type: "textbox", text: "Hello", left: 0, top: 0, width: 100, height: 40 },
+    {
+      role: "headline",
+      type: "textbox",
+      text: "Hello",
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 40,
+    },
   ],
 };
 
@@ -432,7 +469,9 @@ describe("worker fetch handler — /creative/revise", () => {
         {
           message: {
             content: JSON.stringify({
-              ops: [{ role: "headline", action: "set", props: { fontSize: 90 } }],
+              ops: [
+                { role: "headline", action: "set", props: { fontSize: 90 } },
+              ],
             }),
           },
         },
@@ -443,7 +482,9 @@ describe("worker fetch handler — /creative/revise", () => {
       "fetch",
       vi
         .fn()
-        .mockResolvedValue(new Response(JSON.stringify(providerResponse), { status: 200 })),
+        .mockResolvedValue(
+          new Response(JSON.stringify(providerResponse), { status: 200 }),
+        ),
     );
 
     const res = await worker.fetch(
@@ -454,7 +495,9 @@ describe("worker fetch handler — /creative/revise", () => {
 
     expect(res.status).toBe(200);
     const payload = (await res.json()) as { ops: unknown[]; provider: string };
-    expect(payload.ops).toEqual([{ role: "headline", action: "set", props: { fontSize: 90 } }]);
+    expect(payload.ops).toEqual([
+      { role: "headline", action: "set", props: { fontSize: 90 } },
+    ]);
     expect(payload.provider).toBe("groq");
     vi.unstubAllGlobals();
   });
