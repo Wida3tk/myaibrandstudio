@@ -1,5 +1,6 @@
 import { uploadToCloudinary } from "@/lib/assets/cloudinary";
 import { createAsset } from "@/lib/assets/data";
+import { base64ToFile } from "@/lib/assets/base64";
 import { composeLayout } from "@/lib/design/compose";
 import {
   applyComposedSpecs,
@@ -13,17 +14,6 @@ import {
   type DesignVariation,
 } from "./types";
 import { generateBackgroundImage, generateCreativeSpec } from "./generate";
-
-function base64ToFile(
-  base64: string,
-  mimeType: string,
-  filename: string,
-): File {
-  const bytes = atob(base64);
-  const buffer = new Uint8Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++) buffer[i] = bytes.charCodeAt(i);
-  return new File([buffer], filename, { type: mimeType });
-}
 
 export interface PipelineResult {
   spec: CreativeSpec;

@@ -26,6 +26,15 @@ import {
 } from "./gateway/creative/image.js";
 import { reviseRequestSchema } from "./gateway/creative/revise-schema.js";
 import { createRevisionProviders } from "./gateway/creative/revise-providers.js";
+import {
+  videoScriptRequestSchema,
+  videoVoiceoverRequestSchema,
+} from "./gateway/video/schema.js";
+import { createVideoScriptProviders } from "./gateway/video/providers.js";
+import {
+  generateVoiceover,
+  VoiceoverProviderUnavailableError,
+} from "./gateway/video/voiceover.js";
 
 export interface Env {
   FIREBASE_PROJECT_ID: string;
@@ -313,6 +322,102 @@ async function handleCreativeBrief(
   return json({ spec: result.spec, provider: result.provider }, 200, headers);
 }
 
+async function handleVideoScript(
+  request: Request,
+  env: Env,
+  uid: string,
+  firestore: FirestoreClient,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid-json" }, 400, headers);
+  }
+
+  const parsed = videoScriptRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(
+      { error: "invalid-argument", message: parsed.error.issues[0]?.message },
+      400,
+      headers,
+    );
+  }
+  const { orgId, brandId, ...brief } = parsed.data;
+
+  const member = await firestore.getDocument(
+    `organizations/${orgId}/members/${uid}`,
+  );
+  if (!member) {
+    return json({ error: "permission-denied" }, 403, headers);
+  }
+
+  const brand = await firestore.getDocument(
+    `organizations/${orgId}/brands/${brandId}`,
+  );
+  if (!brand) {
+    return json({ error: "not-found" }, 404, headers);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const yyyymm = today.slice(0, 7).replace("-", "");
+  const usageCollectionPath = `usage/${orgId}/${yyyymm}`;
+
+  const tokensUsedToday = await firestore.sumTokensForDate(
+    usageCollectionPath,
+    today,
+  );
+  if (
+    !isWithinBudget({ tokensUsedToday }, { dailyTokenLimit: DAILY_TOKEN_LIMIT })
+  ) {
+    return json({ error: "resource-exhausted" }, 429, headers);
+  }
+
+  const brandDoc = brand as {
+    name?: string;
+    voice?: { tone?: string };
+    audience?: { description?: string };
+    memory?: { facts?: string[] };
+  };
+
+  let result;
+  try {
+    result = await generateWithFallback(
+      {
+        orgId,
+        brandId,
+        ...brief,
+        brandName: brandDoc.name ?? "",
+        brandVoice: brandDoc.voice?.tone ?? "",
+        brandAudience: brandDoc.audience?.description ?? "",
+        brandMemoryFacts: brandDoc.memory?.facts ?? [],
+      },
+      createVideoScriptProviders(env),
+    );
+  } catch (error) {
+    console.error("video script generateWithFallback failed", error);
+    return json({ error: "all-providers-failed" }, 502, headers);
+  }
+
+  await firestore.createDocument(usageCollectionPath, {
+    provider: result.provider,
+    model: result.model,
+    brandId,
+    contentType: "video-script",
+    tokensIn: result.tokensIn,
+    tokensOut: result.tokensOut,
+    date: today,
+    createdAt: new Date().toISOString(),
+  });
+
+  return json(
+    { script: result.script, provider: result.provider },
+    200,
+    headers,
+  );
+}
+
 async function handleCreativeImage(
   request: Request,
   env: Env,
@@ -358,6 +463,55 @@ async function handleCreativeImage(
       return json({ available: false, reason: "unavailable" }, 200, headers);
     }
     console.error("generateBackgroundImage failed", error);
+    return json({ available: false, reason: "failed" }, 200, headers);
+  }
+}
+
+async function handleVideoVoiceover(
+  request: Request,
+  env: Env,
+  uid: string,
+  firestore: FirestoreClient,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid-json" }, 400, headers);
+  }
+
+  const parsed = videoVoiceoverRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return json(
+      { error: "invalid-argument", message: parsed.error.issues[0]?.message },
+      400,
+      headers,
+    );
+  }
+  const { orgId, brandId, text, language } = parsed.data;
+
+  const member = await firestore.getDocument(
+    `organizations/${orgId}/members/${uid}`,
+  );
+  if (!member) {
+    return json({ error: "permission-denied" }, 403, headers);
+  }
+  const brand = await firestore.getDocument(
+    `organizations/${orgId}/brands/${brandId}`,
+  );
+  if (!brand) {
+    return json({ error: "not-found" }, 404, headers);
+  }
+
+  try {
+    const voiceover = await generateVoiceover(env, text, language);
+    return json({ available: true, ...voiceover }, 200, headers);
+  } catch (error) {
+    if (error instanceof VoiceoverProviderUnavailableError) {
+      return json({ available: false, reason: "unavailable" }, 200, headers);
+    }
+    console.error("generateVoiceover failed", error);
     return json({ available: false, reason: "failed" }, 200, headers);
   }
 }
@@ -570,6 +724,12 @@ export default {
     }
     if (pathname === "/creative/revise") {
       return handleCreativeRevise(request, env, uid, firestore, headers);
+    }
+    if (pathname === "/video/script") {
+      return handleVideoScript(request, env, uid, firestore, headers);
+    }
+    if (pathname === "/video/voiceover") {
+      return handleVideoVoiceover(request, env, uid, firestore, headers);
     }
 
     return handleGenerateContent(request, env, uid, firestore, headers);

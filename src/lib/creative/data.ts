@@ -83,7 +83,9 @@ export async function createCampaign(
   return ref.id;
 }
 
-function findUndefinedPaths(value: unknown, path = ""): string[] {
+/** Shared by src/lib/video/data.ts too — a dev-mode early warning for the exact Firestore
+ * undefined-value rejection this pipeline already hit once (see docs/12 QA notes). */
+export function findUndefinedPaths(value: unknown, path = ""): string[] {
   if (value === undefined) return [path || "(root)"];
   if (value === null || typeof value !== "object") return [];
   return Object.entries(value as Record<string, unknown>).flatMap(([key, v]) =>

@@ -71,6 +71,28 @@ function creativeBriefRequest(
   });
 }
 
+function videoVoiceoverRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
+  return new Request("https://worker.example/video/voiceover", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+}
+
+function videoScriptRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
+  return new Request("https://worker.example/video/script", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+}
+
 function creativeImageRequest(
   body: unknown,
   headers: Record<string, string> = {},
@@ -250,6 +272,157 @@ describe("worker fetch handler", () => {
       `usage/org1/${expectedYyyymm}`,
       expect.objectContaining({ tokensIn: 10, tokensOut: 20 }),
     );
+    vi.unstubAllGlobals();
+  });
+});
+
+const validVideoScriptBody = {
+  orgId: "org1",
+  brandId: "brand1",
+  objective: "Promote a weekend training course",
+  language: "en",
+  targetDurationSeconds: 30,
+};
+
+describe("worker fetch handler — /video/script", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mocks.getGoogleAccessToken.mockResolvedValue("access-token");
+    mocks.sumTokensForDate.mockResolvedValue(0);
+  });
+
+  it("returns 403 when the user is not an org member", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument.mockResolvedValue(null);
+    const res = await worker.fetch(
+      videoScriptRequest(validVideoScriptBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 with a validated script on success", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({
+        name: "Acme",
+        voice: { tone: "warm" },
+        audience: { description: "everyone" },
+        memory: { facts: [] },
+      });
+
+    const script = {
+      title: "Weekend Upskill",
+      logline: "A short promo.",
+      scenes: [
+        {
+          order: 1,
+          durationSeconds: 4,
+          visualDescription: "A warm, softly lit desk, editorial photography",
+          onScreenText: "New course",
+          voiceoverLine: "Ready to level up?",
+        },
+        {
+          order: 2,
+          durationSeconds: 5,
+          visualDescription: "A bright modern office",
+          onScreenText: "Enroll now",
+          voiceoverLine: "Join us this weekend.",
+        },
+      ],
+    };
+    const providerResponse = {
+      choices: [{ message: { content: JSON.stringify(script) } }],
+      usage: { prompt_tokens: 10, completion_tokens: 20 },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify(providerResponse), { status: 200 }),
+        ),
+    );
+
+    const res = await worker.fetch(
+      videoScriptRequest(validVideoScriptBody, { Authorization: "Bearer ok" }),
+      env,
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as {
+      script: { title: string; scenes: unknown[] };
+      provider: string;
+    };
+    expect(payload.script.title).toBe("Weekend Upskill");
+    expect(payload.script.scenes).toHaveLength(2);
+    expect(payload.provider).toBe("groq");
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("worker fetch handler — /video/voiceover", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mocks.getGoogleAccessToken.mockResolvedValue("access-token");
+  });
+
+  it("returns available:false rather than an error when nothing is configured", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({});
+
+    const res = await worker.fetch(
+      videoVoiceoverRequest(
+        { orgId: "org1", brandId: "brand1", text: "hello", language: "en" },
+        { Authorization: "Bearer ok" },
+      ),
+      { ...env, GROQ_API_KEY: "", CF_ACCOUNT_ID: "", CF_API_TOKEN: "" },
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as {
+      available: boolean;
+      reason?: string;
+    };
+    expect(payload).toEqual({ available: false, reason: "unavailable" });
+  });
+
+  it("returns the generated voiceover on success", async () => {
+    mocks.verifyFirebaseIdToken.mockResolvedValue({ uid: "u1" });
+    mocks.getDocument
+      .mockResolvedValueOnce({ role: "owner" })
+      .mockResolvedValueOnce({});
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(new Uint8Array([1, 2, 3]), { status: 200 }),
+        ),
+    );
+
+    const res = await worker.fetch(
+      videoVoiceoverRequest(
+        { orgId: "org1", brandId: "brand1", text: "hello", language: "en" },
+        { Authorization: "Bearer ok" },
+      ),
+      env,
+      {} as ExecutionContext,
+    );
+
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as {
+      available: boolean;
+      provider: string;
+    };
+    expect(payload.available).toBe(true);
+    expect(payload.provider).toBe("groq");
     vi.unstubAllGlobals();
   });
 });
