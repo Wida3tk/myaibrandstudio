@@ -13,46 +13,10 @@
  */
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import path from "node:path";
 import fs from "node:fs";
 import type { ShortFormVideoProps } from "./types";
-
-const execFileAsync = promisify(execFile);
-
-async function findFFmpeg(): Promise<string> {
-  // Prefer PATH (what a real deployment/CI should have configured) — only fall back to the
-  // known winget install location for this specific dev machine.
-  try {
-    await execFileAsync("ffmpeg", ["-version"]);
-    return "ffmpeg";
-  } catch {
-    const winget = path.join(
-      process.env.LOCALAPPDATA ?? "",
-      "Microsoft",
-      "WinGet",
-      "Packages",
-    );
-    if (fs.existsSync(winget)) {
-      const pkg = fs
-        .readdirSync(winget)
-        .find((d) => d.toLowerCase().includes("ffmpeg"));
-      if (pkg) {
-        const bin = fs
-          .readdirSync(path.join(winget, pkg))
-          .find((d) => d.toLowerCase().includes("full_build"));
-        if (bin) {
-          const exe = path.join(winget, pkg, bin, "bin", "ffmpeg.exe");
-          if (fs.existsSync(exe)) return exe;
-        }
-      }
-    }
-    throw new Error(
-      "ffmpeg not found on PATH. Install it (see docs/13-video-pipeline-architecture.md) and make sure it's on PATH for new processes.",
-    );
-  }
-}
+import { extractThumbnail } from "./ffmpeg";
 
 async function main() {
   const [, , propsPath, outputArg] = process.argv;
@@ -97,18 +61,8 @@ async function main() {
   console.log(`\nRendered: ${outputPath}`);
 
   try {
-    const ffmpeg = await findFFmpeg();
     const thumbnailPath = outputPath.replace(/\.mp4$/, "-thumbnail.jpg");
-    await execFileAsync(ffmpeg, [
-      "-y",
-      "-ss",
-      "0.5",
-      "-i",
-      outputPath,
-      "-frames:v",
-      "1",
-      thumbnailPath,
-    ]);
+    await extractThumbnail(outputPath, thumbnailPath);
     console.log(`Thumbnail: ${thumbnailPath}`);
   } catch (error) {
     console.warn(

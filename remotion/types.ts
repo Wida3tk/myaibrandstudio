@@ -26,4 +26,7 @@ export type ShortFormVideoProps = {
   language: "ar" | "en";
   colorPalette: [string, string];
   scenes: RenderScene[];
+  /** The brand's logo (Cloudinary/any public HTTPS URL), shown as a small persistent watermark.
+   * Null = no brand logo configured — renders with no overlay rather than faking a mark. */
+  logoUrl: string | null;
 };

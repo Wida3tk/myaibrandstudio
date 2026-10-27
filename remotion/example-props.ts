@@ -10,6 +10,7 @@ export const exampleProps: ShortFormVideoProps = {
   title: "Weekend Upskill",
   language: "en",
   colorPalette: ["#1E2440", "#6750D8"],
+  logoUrl: null,
   scenes: [
     {
       order: 1,
@@ -43,6 +44,7 @@ export const examplePropsArabic: ShortFormVideoProps = {
   title: "طوّر مسيرتك",
   language: "ar",
   colorPalette: ["#1E2440", "#6750D8"],
+  logoUrl: null,
   scenes: [
     {
       order: 1,

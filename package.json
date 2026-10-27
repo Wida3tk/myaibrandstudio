@@ -13,7 +13,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "video:studio": "remotion studio remotion/index.ts",
-    "render-video": "tsx remotion/render.ts"
+    "render-video": "tsx remotion/render.ts",
+    "render-server": "tsx remotion/render-server.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.3.1",

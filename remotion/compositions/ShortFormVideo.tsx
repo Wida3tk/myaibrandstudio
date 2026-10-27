@@ -11,6 +11,26 @@ import {
 } from "remotion";
 import type { RenderScene, ShortFormVideoProps } from "../types";
 
+/** Fades each scene in/out of black at its own boundaries — a real crossfade needs overlapping
+ * sequences, which `Series` doesn't give us without a lot of extra bookkeeping; fading each
+ * scene's own content to/from black at the cut reads as an intentional transition rather than a
+ * hard cut, for a fraction of the complexity. */
+const TRANSITION_FRAMES = 10;
+
+function useSceneTransitionOpacity(durationInFrames: number): number {
+  const frame = useCurrentFrame();
+  const fadeFrames = Math.min(
+    TRANSITION_FRAMES,
+    Math.floor(durationInFrames / 4),
+  );
+  return interpolate(
+    frame,
+    [0, fadeFrames, durationInFrames - fadeFrames, durationInFrames],
+    [0, 1, 1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+  );
+}
+
 /** Slow, constant Ken Burns zoom over the scene's own duration — never past 1.12x, so it never
  * reveals the image's edge regardless of the scene length. */
 function KenBurnsBackground({
@@ -119,10 +139,61 @@ function SceneCaption({
   );
 }
 
+function SceneContent({
+  scene,
+  colorPalette,
+  language,
+}: {
+  scene: RenderScene;
+  colorPalette: [string, string];
+  language: "ar" | "en";
+}) {
+  const opacity = useSceneTransitionOpacity(scene.durationInFrames);
+  return (
+    <AbsoluteFill style={{ opacity }}>
+      <KenBurnsBackground scene={scene} colorPalette={colorPalette} />
+      <SceneCaption scene={scene} language={language} />
+      {scene.voiceoverUrl && <Audio src={scene.voiceoverUrl} />}
+    </AbsoluteFill>
+  );
+}
+
+/** A small, persistent watermark — not per-scene, so it doesn't fade with the scene transitions.
+ * Positioned opposite the caption's reading direction corner so it never collides with RTL/LTR
+ * on-screen text. */
+function BrandLogo({
+  logoUrl,
+  language,
+}: {
+  logoUrl: string;
+  language: "ar" | "en";
+}) {
+  return (
+    <AbsoluteFill
+      style={{
+        justifyContent: "flex-start",
+        alignItems: language === "ar" ? "flex-start" : "flex-end",
+        padding: 48,
+      }}
+    >
+      <Img
+        src={logoUrl}
+        style={{
+          height: 72,
+          maxWidth: 220,
+          objectFit: "contain",
+          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
+        }}
+      />
+    </AbsoluteFill>
+  );
+}
+
 export function ShortFormVideo({
   scenes,
   colorPalette,
   language,
+  logoUrl,
 }: ShortFormVideoProps) {
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -132,12 +203,15 @@ export function ShortFormVideo({
             key={scene.order}
             durationInFrames={scene.durationInFrames}
           >
-            <KenBurnsBackground scene={scene} colorPalette={colorPalette} />
-            <SceneCaption scene={scene} language={language} />
-            {scene.voiceoverUrl && <Audio src={scene.voiceoverUrl} />}
+            <SceneContent
+              scene={scene}
+              colorPalette={colorPalette}
+              language={language}
+            />
           </Series.Sequence>
         ))}
       </Series>
+      {logoUrl && <BrandLogo logoUrl={logoUrl} language={language} />}
     </AbsoluteFill>
   );
 }
