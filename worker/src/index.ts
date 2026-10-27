@@ -509,6 +509,16 @@ async function handleVideoVoiceover(
     return json({ available: true, ...voiceover }, 200, headers);
   } catch (error) {
     if (error instanceof VoiceoverProviderUnavailableError) {
+      // Always logged, even on the "unavailable" path: this error fires both when nothing is
+      // configured (attempts: []) AND when every configured provider actually failed, and the
+      // client response ("unavailable", no detail) can't tell those apart — only the server log
+      // can. Previously this branch never logged, which silently hid real provider errors.
+      if (error.attempts.length > 0) {
+        console.error(
+          "generateVoiceover: all providers failed",
+          error.attempts,
+        );
+      }
       return json({ available: false, reason: "unavailable" }, 200, headers);
     }
     console.error("generateVoiceover failed", error);

@@ -5,14 +5,13 @@
 // Fallback: Cloudflare Workers AI `melotts` — same already-verified free/no-training account as
 // the Flux image model, but English-only (no Arabic voice), so it only ever covers English scripts.
 //
-// NOT independently verified against a live account from this sandbox (no API keys available) —
-// implemented strictly against each provider's documented request/response shape. Two specific
-// details need confirming before relying on this in production:
-//   1. The exact valid `voice` names for Groq's canopylabs/orpheus-* models (not found in the
-//      research pass — placeholders below, verify at console.groq.com/docs/text-to-speech).
-//   2. Groq's GroqCloud Services Agreement's commercial-use terms for free-tier audio output
-//      (the public groq.com Terms of Use explicitly say they do NOT cover API usage) — confirm
-//      before shipping Groq-voiced videos commercially.
+// Model IDs and voice names below are confirmed against console.groq.com/docs/text-to-speech and
+// .../docs/text-to-speech/orpheus (fetched 2026-10-27), not placeholders. Both models are labelled
+// "Preview" by Groq ("should not be used in production environments as they may be discontinued at
+// short notice") — a real constraint to flag to the user, not a reason to avoid using them now.
+// Groq's GroqCloud Services Agreement's commercial-use terms for this output are still unconfirmed
+// (the public groq.com Terms of Use explicitly excludes API usage) — confirm before shipping
+// Groq-voiced videos commercially.
 
 export interface VoiceoverResult {
   base64: string;
@@ -20,19 +19,31 @@ export interface VoiceoverResult {
   provider: "groq" | "cloudflare-workers-ai";
 }
 
-export class VoiceoverProviderUnavailableError extends Error {}
+export class VoiceoverProviderUnavailableError extends Error {
+  /** The underlying per-provider failures, if any were attempted (empty = nothing configured).
+   * Carried on the error object (not just baked into `message`) so callers that need to report
+   * the raw reason — e.g. server-side logging — don't have to parse a human-readable string. */
+  readonly attempts: string[];
+
+  constructor(message: string, attempts: string[] = []) {
+    super(message);
+    this.attempts = attempts;
+  }
+}
 
 const GROQ_MODEL: Record<"ar" | "en", string> = {
   ar: "canopylabs/orpheus-arabic-saudi",
   en: "canopylabs/orpheus-v1-english",
 };
 
-// Placeholder voice names — Groq's docs for these specific models didn't surface a confirmed
-// voice list during research. Verify at console.groq.com/docs/text-to-speech before relying on
-// this; an invalid voice name will make generateVoiceover throw (and voiceover falls back to
-// silence client-side), not silently produce wrong audio.
+// Confirmed voice names per model from console.groq.com/docs/text-to-speech/orpheus (2026-10-27).
+// English (canopylabs/orpheus-v1-english): autumn, diana, hannah (female); austin, daniel, troy
+// (male). Arabic/Saudi (canopylabs/orpheus-arabic-saudi): abdullah, fahad, sultan (male); lulwa,
+// noura, aisha (female) — the docs' own Arabic example uses "fahad"/"noura". "austin" (English)
+// was already a valid voice; "layla" (the prior Arabic placeholder) is not a real voice for
+// orpheus-arabic-saudi, which was a confirmed root cause of Arabic voiceover always failing.
 const GROQ_VOICE: Record<"ar" | "en", string> = {
-  ar: "layla",
+  ar: "fahad",
   en: "austin",
 };
 
@@ -145,5 +156,6 @@ export async function generateVoiceover(
     attempts.length > 0
       ? `All voiceover providers failed: ${attempts.join("; ")}`
       : "No voiceover provider is configured.",
+    attempts,
   );
 }

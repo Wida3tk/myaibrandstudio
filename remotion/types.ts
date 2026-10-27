@@ -7,8 +7,12 @@
 export type RenderScene = {
   order: number;
   durationInFrames: number;
+  /** Cloudinary (or any public HTTPS) URL for a real video clip for this scene. Takes priority over
+   * imageUrl when set — real motion footage, not a panned still. Null = no clip provided. */
+  videoUrl: string | null;
   /** Cloudinary (or any public HTTPS) URL for the storyboard frame. Null = no image provider was
-   * configured/available — renders a brand-colored gradient instead of faking an image. */
+   * configured/available — renders a brand-colored gradient instead of faking an image. Ignored
+   * when videoUrl is set. */
   imageUrl: string | null;
   onScreenText: string;
   /** Spoken line for this scene, shown as a caption — and as the <Audio> track whenever
@@ -26,4 +30,7 @@ export type ShortFormVideoProps = {
   language: "ar" | "en";
   colorPalette: [string, string];
   scenes: RenderScene[];
+  /** The brand's logo (Cloudinary/any public HTTPS URL), shown as a small persistent watermark.
+   * Null = no brand logo configured — renders with no overlay rather than faking a mark. */
+  logoUrl: string | null;
 };
