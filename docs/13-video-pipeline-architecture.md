@@ -14,7 +14,8 @@ Firebase Hosting's static export can run (see "Rendering" below).
 Brief (src/components/video/brief-dialog.tsx)
   -> AI script writer      (worker POST /video/script       -> worker/src/gateway/video/)
   -> storyboard images     (worker POST /creative/image, reused — no second image pipeline;
-                             per-scene manual "upload a real image" fallback in the UI)
+                             per-scene manual "upload a real image" or "upload a real video clip"
+                             fallback in the UI — video takes priority when both are set)
   -> AI voiceover          (worker POST /video/voiceover     -> worker/src/gateway/video/voiceover.ts)
   -> live preview          (@remotion/player, src/app/(app)/video/page.tsx — the SAME composition
                              component the real renderer uses, via the @video-renderer/* path alias)
@@ -34,10 +35,18 @@ and 2–10 scenes, each with a duration (2–30s), an always-English `visualDesc
 storyboard image prompt — explicitly forbidden from asking for any rendered text or logos, same
 rule as the image pipeline), `onScreenText`, and a `voiceoverLine`.
 
-## 2. Storyboard images
+## 2. Storyboard images and real video clips
 
 Each scene's `visualDescription` is sent to the **existing** `/creative/image` endpoint
 (Cloudflare Workers AI `flux-1-schnell`) — not a second, parallel image pipeline.
+
+A scene can also carry a real **video** clip (`RenderScene.videoUrl` /
+`VideoProjectScene.videoUrl`), which takes priority over `imageUrl` when set and renders through
+Remotion's `OffthreadVideo` — genuine motion footage, not a Ken-Burns-panned still. No AI
+video-generation provider exists (this pipeline doesn't invent one), so `videoUrl` is always `null`
+out of `buildVideoProject`; the only way a scene gets one today is the Video Studio page's per-scene
+**"Upload a real video clip"** control (reuses the exact same `uploadToCloudinary` path as the image
+upload — Cloudinary's `auto/upload` endpoint already handles video).
 
 **Confirmed unavailable on the live Worker right now**, not just "unverified": a direct
 authenticated test against the deployed `myaibrandstudio-ai-gateway` Worker returned
@@ -185,26 +194,23 @@ after that first-run download, and not on the retry. Flagging as a known flakine
 a bug in this project's code; a production deployment should wrap `runRenderJob` so one job's crash
 can't take the whole service down.
 
-**Fully closed**: the Link Motion org's Asset Library has no real product photo of its own (no
-branded car/footage was available), so at the user's explicit direction ("use a picture of any car,
-just something luxurious") a real, freely-licensed stock photo (a Ferrari F8, from Unsplash — not
-AI-generated, a genuine photograph, Unsplash License) was used as every scene's `imageUrl` instead
-of the gradient fallback. Re-rendered the same real script/voice/logo project with this image added
-to all 4 scenes through the identical `render-server.ts` pipeline (no code changes — `imageUrl` is
-already a first-class, real-image-or-null field). Independently re-verified with `ffprobe`:
+**Fully closed, in two rounds**: the Link Motion org's Asset Library has no real product photo or
+footage of its own, so at the user's explicit direction ("use a picture of any car, just something
+luxurious") a real, freely-licensed stock photo (a Ferrari F8, from Unsplash — not AI-generated, a
+genuine photograph) was used as every scene's `imageUrl` first, and the render was independently
+re-verified with `ffprobe` (`h264` 1080×1920 + `aac`, 15.019s) and a visual frame check (real photo,
+real logo, correct Arabic RTL captions, all in the same frame).
 
-```
-video: h264, 1080x1920
-audio: aac
-duration: 15.019000s
-```
-
-A frame extracted from the middle of the render shows the real car photo as the scene background
-(Ken Burns pan/zoom, not a static image), the real Link Motion logo watermark, and correct Arabic
-RTL captions, together in the same frame — confirming every piece of the original requirement (real
-visuals, real audible narration, real logo/transitions, real playable MP4 with sound) against a real
-render of a real brand's content, not a fixture or a placeholder. This is the final, complete
-deliverable for this pipeline.
+The user then asked for real *motion*, not a still with a pan effect — correctly: a photo is not a
+video. That's what added `videoUrl`/`OffthreadVideo` support (§2) rather than shipping the photo
+version as final. Re-rendered the identical script/voice/logo project with a real, freely-licensed
+stock **video** clip (a Ferrari, from Pexels) on all 4 scenes instead. Independently re-verified
+again with `ffprobe` (same `h264` 1080×1920 + `aac`, 15.019s), and — specifically to prove this is
+real footage and not another disguised still — extracted three frames from within the same scene
+(frames 10/60/110) and confirmed the camera angle and light reflections visibly change between them,
+which a panned static image cannot produce. This is the final, complete deliverable for this
+pipeline: real script, real audible narration, real moving footage, real logo, real playable MP4
+with sound, against a real render of a real brand's content.
 
 A production deployment would need this render step to run somewhere with a real Node.js runtime —
 a small worker service, a CI job, or (for now) the user's own machine via this local service — not
