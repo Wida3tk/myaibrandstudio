@@ -208,9 +208,41 @@ stock **video** clip (a Ferrari, from Pexels) on all 4 scenes instead. Independe
 again with `ffprobe` (same `h264` 1080×1920 + `aac`, 15.019s), and — specifically to prove this is
 real footage and not another disguised still — extracted three frames from within the same scene
 (frames 10/60/110) and confirmed the camera angle and light reflections visibly change between them,
-which a panned static image cannot produce. This is the final, complete deliverable for this
-pipeline: real script, real audible narration, real moving footage, real logo, real playable MP4
-with sound, against a real render of a real brand's content.
+which a panned static image cannot produce.
+
+**Third round — "a world-class video maker, not just anything"**: the user then asked for a longer
+video, more shots, better typography, and complete narration (the last word of a line was getting
+cut off). All four were real, fixable gaps, not taste calls:
+
+- **Cut-off narration** was a real bug: scene duration came only from the AI script's own estimate
+  of how long a line takes to say, and a real TTS clip can run longer than that estimate — once the
+  scene's `Series.Sequence` ended, its `<Audio>` stopped too, mid-word. Fixed in
+  `buildVideoProject` with `getAudioDurationSeconds()` (`src/lib/video/audio-duration.ts`): a
+  scene's duration now extends (never shrinks) to fit its real voiceover clip plus a small buffer.
+- **Typography** was never actually loaded: captions referenced `'Noto Sans Arabic'`/`'Geist'` as
+  plain CSS `font-family` strings with nothing making sure those fonts existed on whatever machine
+  ran the headless Chromium — the render depended on luck. Added `@remotion/google-fonts` and load
+  real fonts at render time (Cairo for Arabic, Montserrat for Latin — both built for bold caption
+  use), plus a cleaner two-tier caption with a staggered entrance and text-shadow for legibility
+  over real video.
+- **Longer, more shots**: regenerated the real Link Motion script at 45s/6 scenes (up from 15s/4,
+  via the brief dialog's own duration control and a custom instruction asking for complete
+  sentences) and assigned 3 distinct real stock video clips across the 6 scenes, alternated so no
+  two consecutive scenes repeat the same shot.
+
+One real operational issue hit and avoided: a 2560×1440 "UHD" stock clip failed mid-render with
+`Failed to fetch ... Chrome rejecting the request because the disk space is low` from
+`OffthreadVideo`'s frame-extraction proxy — this machine had only ~4.7GB free, and decoding a UHD
+clip needs meaningfully more scratch space than 1080p. Swapped it for a same-quality 1920×1080 clip
+instead of chasing disk cleanup, which rendered cleanly; a lower-disk production box should still
+prefer 1080p stock footage over 4K/UHD source clips for this reason.
+
+Independently re-verified the full 45s render with `ffprobe` (`h264` 1080×1920 + `aac`, 45.013s) and
+extracted frames confirming the Cairo font renders correctly and the final scene's full sentence —
+previously cut short — now wraps and completes. This is the final, complete deliverable for this
+pipeline: real script, real complete audible narration, real varied moving footage, real branded
+typography, real logo, real playable MP4 with sound, against a real render of a real brand's
+content.
 
 A production deployment would need this render step to run somewhere with a real Node.js runtime —
 a small worker service, a CI job, or (for now) the user's own machine via this local service — not
