@@ -1,24 +1,28 @@
 # AI Video Pipeline
 
 Turns a short brief into a real, rendered short-form video: script → storyboard → voiceover →
-live preview → approve → render. Deliberately a separate pipeline from the image/carousel
-pipeline (`docs/12-creative-pipeline.md`) — different data shape (scenes over time, not one
-static canvas), different provider needs (TTS, not just images), and critically a different
-_runtime_: the actual rendering step needs a headless Chromium and real compute time that neither
-Cloudflare Workers nor Firebase Hosting's static export can run (see "Why rendering is separate"
-below).
+live preview → approve → **real local MP4 render, triggered and played back from inside the
+app**. Deliberately a separate pipeline from the image/carousel pipeline
+(`docs/12-creative-pipeline.md`) — different data shape (scenes over time, not one static canvas),
+different provider needs (TTS, not just images), and critically a different _runtime_: the actual
+rendering step needs a headless Chromium and real compute time that neither Cloudflare Workers nor
+Firebase Hosting's static export can run (see "Rendering" below).
 
 ## Pipeline
 
 ```
 Brief (src/components/video/brief-dialog.tsx)
   -> AI script writer      (worker POST /video/script       -> worker/src/gateway/video/)
-  -> storyboard images     (worker POST /creative/image, reused — no second image pipeline)
+  -> storyboard images     (worker POST /creative/image, reused — no second image pipeline;
+                             per-scene manual "upload a real image" fallback in the UI)
   -> AI voiceover          (worker POST /video/voiceover     -> worker/src/gateway/video/voiceover.ts)
   -> live preview          (@remotion/player, src/app/(app)/video/page.tsx — the SAME composition
                              component the real renderer uses, via the @video-renderer/* path alias)
-  -> approve                -> saves to Firestore (videoProjects) + downloadable project JSON
-  -> real render (separate step, see below) -> npm run render-video -- project.json out.mp4
+  -> approve                -> saves to Firestore (videoProjects)
+  -> real render            -> local render service (remotion/render-server.ts), called directly
+                               from the Video Studio page: click "Render real video", watch
+                               progress, get a playable <video> + a real MP4 download — no manual
+                               JSON export, no terminal command, per video.
 ```
 
 ## 1. Script generation
@@ -33,26 +37,47 @@ rule as the image pipeline), `onScreenText`, and a `voiceoverLine`.
 ## 2. Storyboard images
 
 Each scene's `visualDescription` is sent to the **existing** `/creative/image` endpoint
-(Cloudflare Workers AI `flux-1-schnell`) — not a second, parallel image pipeline. Same caveat as
-`docs/12`: not verified against a live account from this sandbox (no provider credentials), falls
-back to a gradient per scene (the Remotion composition's own `KenBurnsBackground`) when
-unconfigured or the call fails.
+(Cloudflare Workers AI `flux-1-schnell`) — not a second, parallel image pipeline.
+
+**Confirmed unavailable on the live Worker right now**, not just "unverified": a direct
+authenticated test against the deployed `myaibrandstudio-ai-gateway` Worker returned
+`{"available":false,"reason":"unavailable"}`, and `worker/wrangler.toml` has `CF_ACCOUNT_ID` /
+`CF_API_TOKEN` commented out — they were never actually provisioned, despite earlier docs here
+saying otherwise. See `docs/07-cloudflare-worker-setup.md` §6 for how to create the token; until
+that's done, every scene falls back to a gradient (the Remotion composition's own
+`KenBurnsBackground`), and the Video Studio page offers a **per-scene "upload a real image"**
+file input (reuses the same Cloudinary path as every other asset) as the real-visual path that
+doesn't depend on that credential.
 
 ## 3. Voiceover
 
 `/video/voiceover` (`worker/src/gateway/video/voiceover.ts`) — **primary: Groq TTS**
 (`canopylabs/orpheus-arabic-saudi` / `canopylabs/orpheus-v1-english`), reusing the same
-`GROQ_API_KEY` already configured for text generation (no new signup). Research found this is the
-only provider that is simultaneously free, no-card, bilingual Arabic+English, and callable with
-plain `fetch()` from a Workers runtime. **Fallback: Cloudflare Workers AI `melotts`** — same
-account as the Flux image model, English-only (no Arabic voice). A scene with a failed/unavailable
-voiceover renders silently; the spoken line still appears as an on-screen caption.
+`GROQ_API_KEY` already configured for text generation (no new signup). This is the only provider
+found that is simultaneously free, no-card, bilingual Arabic+English, and callable with plain
+`fetch()` from a Workers runtime. **Fallback: Cloudflare Workers AI `melotts`** — same account as
+the Flux image model (so currently unavailable for the same reason as §2), English-only (no Arabic
+voice). A scene with a failed/unavailable voiceover renders silently; the spoken line still appears
+as an on-screen caption.
 
-**Not verified live** — implemented against each provider's documented shape, two things need
-human confirmation before production use: the exact Groq voice names for these specific models
-(undocumented in the research pass; `layla`/`austin` in the code are placeholders), and whether
-GroqCloud's Services Agreement (separate from groq.com's public Terms of Use, which explicitly
-excludes API usage) covers commercial use of free-tier TTS output.
+**Root cause found and fixed, not yet deployed.** A direct authenticated test against the live
+Worker showed voiceover failing even for English, where a valid voice name was already in use —
+`index.ts`'s error handling turned out to have a real bug: `VoiceoverProviderUnavailableError` was
+thrown both when nothing is configured _and_ when every provider actually failed, and the handler's
+catch checked that type first, so the real Groq error was never logged server-side either, even
+though `GROQ_API_KEY` is confirmed present and working (it powers the script writer on this same
+Worker). That's fixed — the error now carries its per-provider `attempts`, and the handler logs
+them. Separately, confirmed against Groq's own docs (`console.groq.com/docs/text-to-speech/orpheus`,
+fetched 2026-10-27): the Arabic voice name in code, `"layla"`, is not a real voice for
+`canopylabs/orpheus-arabic-saudi` — the real voices are `abdullah, fahad, sultan` (male) and
+`lulwa, noura, aisha` (female); fixed to `"fahad"` (the docs' own example voice). The English voice,
+`"austin"`, was already valid. **Both fixes are in this branch but not deployed** — deploying the
+Worker needs separate approval (see PR description); until then, live voiceover is unverified
+beyond documentation research, same as image generation above. Also still open: whether GroqCloud's
+Services Agreement (separate from groq.com's public Terms of Use, which explicitly excludes API
+usage) covers commercial use of free-tier TTS output, and that both Orpheus models are labelled
+"Preview" by Groq ("should not be used in production environments as they may be discontinued at
+short notice").
 
 ## 4. Live preview
 
@@ -76,59 +101,89 @@ permission rules. **Requires deploying the updated `firestore.rules`** to actual
 caveat as `docs/12`'s `campaigns` collection); until then the save fails gracefully (logged, not
 blocking) and the video stays fully usable/downloadable client-side.
 
-## 6. Rendering — why it's a separate step
+## 6. Rendering
 
 Actual MP4 rendering needs `@remotion/renderer`, which drives a real headless Chromium to rasterize
 frames and then encodes them — genuine CPU/GPU work on the order of seconds to minutes, not
 something a Cloudflare Worker (CPU-time-limited, no Chromium) or Firebase Hosting's static export
-(no server runtime at all) can do. So `remotion/render.ts` is a **Node.js script**, not a Worker
-endpoint or a browser action:
+(no server runtime at all) can do. Two real Node.js entry points share that renderer and a common
+FFmpeg helper (`remotion/ffmpeg.ts`):
 
-```bash
-npm run render-video -- project.json out/video.mp4
-```
+- **`remotion/render.ts`** — a one-shot CLI script for ad hoc / CI use:
+  `npm run render-video -- project.json out/video.mp4`.
+- **`remotion/render-server.ts`** — **the local development rendering service**, and what the
+  Video Studio page actually calls. A small standalone HTTP server (`npm run render-server`,
+  default `http://localhost:4100`): bundles the Remotion project once at startup, then on
+  `POST /render` with a `ShortFormVideoProps` body starts an async render job and returns a
+  `jobId`; `GET /render/:id` reports progress; `GET /render/:id/video` (Range-aware, for the
+  `<video>` player and the download link) and `GET /render/:id/thumbnail` stream the results once
+  done. This is what replaces the old "download the project JSON and run a terminal command"
+  flow — a user clicks **Render real video** in the Video Studio, watches real progress, and gets
+  a playable `<video>` plus a download, all in-app. The service itself still has to be started
+  once, same as `npm run dev` — that's unavoidable without a Node runtime in production (see
+  below), so the page checks `GET /health` and shows an honest "local render service isn't
+  running, start it with `npm run render-server`" notice rather than silently failing or pretending
+  cloud rendering works.
 
-It bundles the Remotion project, selects the `ShortFormVideo` composition, renders it via
-`renderMedia()` (Remotion's programmatic API — **not** the `npx remotion render` CLI subprocess,
-which on this Windows checkout mis-splits arguments because the project path contains spaces; a
-real bug caught by actually running it, not assumed away), then extracts a poster-frame thumbnail
-via the system FFmpeg install (`ffmpeg -ss 0.5 -i out.mp4 -frames:v 1 out-thumbnail.jpg`).
+Both use `renderMedia()` — Remotion's programmatic API, **not** the `npx remotion render` CLI
+subprocess, which on this Windows checkout mis-splits arguments because the project path contains
+spaces (a real bug caught by actually running it, not assumed away) — then extract a poster-frame
+thumbnail via the system FFmpeg install, and (the server) probe the result with `ffprobe` to report
+whether it actually has video/audio streams rather than trusting that render succeeded just because
+no exception was thrown.
 
-**Verified for real**: rendered actual 1080×1920 H.264 MP4s in both English and Arabic from the
-example fixtures (`remotion/example-props.ts`) — 10 seconds each, correct resolution and duration
-confirmed via `ffprobe`, correct Arabic RTL text rendering confirmed by extracting and visually
-inspecting a frame. Both fixtures use `imageUrl: null` / `voiceoverUrl: null` (no live provider
-credentials in this sandbox) — this proves the rendering engine itself end to end without faking
-AI-generated storyboard or voiceover content.
+**Verified for real, this round**: started `render-server`, submitted both example fixtures
+(`remotion/example-props.ts`) over HTTP, polled job status to completion, downloaded the resulting
+files, and inspected them directly —
 
-A production deployment would run this render step somewhere with a real Node.js runtime — a
-small worker service, a CI job, or the user's own machine — not the app's current Cloudflare
-Workers + Firebase static-export architecture. That's a real architectural gap, documented here
-rather than hidden behind a UI that implies rendering "just works" in the browser.
+- English fixture: real H.264 1080×1920 MP4, 10.000000s (`ffprobe -show_entries
+format=duration`), one video stream, no audio stream (correct: this fixture's every scene has
+  `voiceoverUrl: null` by design — proves the pipeline doesn't fake an audio track it doesn't have).
+- Arabic fixture: same render path, correct RTL on-screen text confirmed by extracting and visually
+  inspecting the poster frame.
+
+Neither fixture has a live-provider image or voiceover (no credentials in this sandbox for either,
+see §2–3) — this proves the rendering engine, the HTTP service, and the progress/stream-probing
+machinery end to end, without faking AI-generated content. **Not yet done**: a render using a real
+Groq-voiced track (blocked on the Worker deploy, §3) or a real AI-generated image (blocked on
+`CF_ACCOUNT_ID`/`CF_API_TOKEN`, §2); a manually-uploaded scene image already works today (goes
+through the same `uploadToCloudinary` path proven in §2/`docs/12`) and would render through this
+exact pipeline unchanged.
+
+A production deployment would need this render step to run somewhere with a real Node.js runtime —
+a small worker service, a CI job, or (for now) the user's own machine via this local service — not
+the app's current Cloudflare Workers + Firebase static-export architecture. That's a real
+architectural gap; there is no cloud-rendering capability in this project today, and nothing in the
+app claims otherwise.
 
 ## Setup
 
 - `GROQ_API_KEY` — already configured (see `docs/07-cloudflare-worker-setup.md`), covers the
-  script writer and the primary voiceover provider.
-- `CF_ACCOUNT_ID` / `CF_API_TOKEN` — already configured for the image pipeline's background
-  generation (`docs/07-cloudflare-worker-setup.md` §6), also covers storyboard images and the
-  English-only voiceover fallback.
-- FFmpeg on `PATH` for the thumbnail-extraction step (`npm run render-video` falls back to a
-  known winget install path on this specific dev machine if not found on `PATH`, but a real
-  deployment should just have it on `PATH`).
-- No new secrets needed beyond what the image pipeline already requires.
+  script writer; the voiceover fix in this round is also implemented against it but **not yet
+  deployed** (see §3).
+- `CF_ACCOUNT_ID` / `CF_API_TOKEN` — **not configured** (confirmed: commented out in
+  `worker/wrangler.toml`, and a live direct test returns `available:false`). Needed for AI
+  storyboard images and the English-only voiceover fallback; see
+  `docs/07-cloudflare-worker-setup.md` §6 for how to create the token. Until then, use the Video
+  Studio's per-scene manual image upload for real visuals.
+- FFmpeg on `PATH` for the thumbnail-extraction and stream-verification steps (`render.ts` and
+  `render-server.ts` both fall back to a known winget install path on this specific dev machine if
+  not found on `PATH`, but a real deployment should just have it on `PATH`).
+- `npm run render-server` — start once per dev session, alongside `npm run dev`, before using the
+  Video Studio's render button. Not needed for script/preview/approve, only for the real MP4 step.
 
 ## Testing
 
 Worker: `worker/src/gateway/video/*.test.ts` (schema validation, prompt content, the voiceover
 provider's Groq/Cloudflare-fallback/Arabic-has-no-fallback paths, all with mocked `fetch`) plus
 route tests in `worker/src/index.test.ts`. Rendering itself isn't a classic unit test — jsdom has
-no real `<canvas>`/WebGL/Chromium — it's verified by actually running `render-video` and inspecting
-the real output (see above), the same reasoning `docs/12` gives for not unit-testing Fabric canvas
-code.
+no real `<canvas>`/WebGL/Chromium — it's verified by actually running the render service and
+inspecting the real output (see §6), the same reasoning `docs/12` gives for not unit-testing Fabric
+canvas code.
 
-Live browser QA: ran the full brief → script (stubbed) → storyboard (real Cloudinary upload) →
-preview (`@remotion/player`, real rendering) → approve flow in both languages against the real
-Cloudinary account, confirmed correct Arabic RTL in the live player, confirmed the per-scene
-image/voiceover status indicators, confirmed graceful degradation when Firestore rules aren't
-deployed (same as `docs/12`).
+Live browser QA: ran the full brief → script → storyboard → preview (`@remotion/player`) → approve
+flow against the real, deployed, authenticated production app
+(`https://myaibrandstudio-dev.web.app`, real "Link Motion" org), confirmed correct Arabic RTL in
+the live player, confirmed the per-scene image/voiceover status indicators, and made direct
+authenticated calls to the live Worker's `/creative/image` and `/video/voiceover` endpoints to
+confirm their actual current availability (§2–3) rather than inferring it from the UI alone.
