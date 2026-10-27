@@ -10,7 +10,21 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import { loadFont as loadArabicFont } from "@remotion/google-fonts/Cairo";
+import { loadFont as loadLatinFont } from "@remotion/google-fonts/Montserrat";
 import type { RenderScene, ShortFormVideoProps } from "../types";
+
+// Real, licensed Google Fonts fetched at render time — not a CSS font-family name hoping a
+// matching font happens to be installed on whatever machine runs the headless Chromium. Cairo for
+// Arabic and Montserrat for Latin are both built for this kind of bold, high-contrast caption use.
+const { fontFamily: ARABIC_FONT } = loadArabicFont("normal", {
+  weights: ["600", "700", "800"],
+  subsets: ["arabic"],
+});
+const { fontFamily: LATIN_FONT } = loadLatinFont("normal", {
+  weights: ["600", "700", "800"],
+  subsets: ["latin"],
+});
 
 /** Fades each scene in/out of black at its own boundaries — a real crossfade needs overlapping
  * sequences, which `Series` doesn't give us without a lot of extra bookkeeping; fading each
@@ -101,7 +115,20 @@ function SceneCaption({
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const enter = spring({ frame, fps, config: { damping: 200 } });
+  // Headline leads; the subtitle trails a few frames behind it for a light stagger rather than
+  // both snapping in at once. Lower damping than the old config so it settles with a touch of
+  // life instead of landing dead-flat.
+  const headlineEnter = spring({
+    frame,
+    fps,
+    config: { damping: 18, mass: 0.6 },
+  });
+  const subtitleEnter = spring({
+    frame: Math.max(0, frame - 5),
+    fps,
+    config: { damping: 18, mass: 0.6 },
+  });
+  const fontFamily = language === "ar" ? ARABIC_FONT : LATIN_FONT;
 
   return (
     <AbsoluteFill
@@ -109,29 +136,29 @@ function SceneCaption({
       style={{
         justifyContent: "flex-end",
         alignItems: "center",
-        paddingBottom: 140,
-        paddingInline: 64,
+        paddingBottom: 150,
+        paddingInline: 72,
       }}
     >
       <AbsoluteFill
         style={{
           background:
-            "linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0))",
+            "linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.15) 55%, rgba(0,0,0,0))",
         }}
       />
       {scene.onScreenText && (
         <div
           style={{
             color: "#fff",
-            fontFamily:
-              language === "ar"
-                ? "'Noto Sans Arabic', sans-serif"
-                : "Geist, sans-serif",
-            fontWeight: 700,
-            fontSize: 72,
+            fontFamily,
+            fontWeight: 800,
+            fontSize: 76,
+            lineHeight: 1.08,
+            letterSpacing: "-0.01em",
             textAlign: "center",
-            opacity: enter,
-            transform: `translateY(${interpolate(enter, [0, 1], [24, 0])}px)`,
+            textShadow: "0 2px 24px rgba(0,0,0,0.45)",
+            opacity: headlineEnter,
+            transform: `translateY(${interpolate(headlineEnter, [0, 1], [28, 0])}px) scale(${interpolate(headlineEnter, [0, 1], [0.94, 1])})`,
           }}
         >
           {scene.onScreenText}
@@ -140,15 +167,17 @@ function SceneCaption({
       {scene.voiceoverLine && (
         <div
           style={{
-            color: "rgba(255,255,255,0.85)",
-            fontFamily:
-              language === "ar"
-                ? "'Noto Sans Arabic', sans-serif"
-                : "Geist, sans-serif",
-            fontSize: 36,
+            color: "rgba(255,255,255,0.88)",
+            fontFamily,
+            fontWeight: 600,
+            fontSize: 34,
+            lineHeight: 1.4,
+            letterSpacing: "0.01em",
             textAlign: "center",
-            marginTop: 16,
-            opacity: enter,
+            textShadow: "0 1px 12px rgba(0,0,0,0.5)",
+            marginTop: 18,
+            opacity: subtitleEnter,
+            transform: `translateY(${interpolate(subtitleEnter, [0, 1], [16, 0])}px)`,
           }}
         >
           {scene.voiceoverLine}

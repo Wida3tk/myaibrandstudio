@@ -3,6 +3,12 @@ import { createAsset } from "@/lib/assets/data";
 import { base64ToFile } from "@/lib/assets/base64";
 import { generateBackgroundImage } from "@/lib/creative/generate";
 import { generateSceneVoiceover, generateVideoScript } from "./generate";
+import { getAudioDurationSeconds } from "./audio-duration";
+
+/** Scene duration never shrinks to fit a shorter clip — only grows to fit a longer one — so a real
+ * voiceover clip is never cut off mid-word. A small buffer absorbs the fade transition
+ * (TRANSITION_FRAMES in ShortFormVideo.tsx) landing right on the last syllable. */
+const VOICEOVER_DURATION_BUFFER_SECONDS = 0.5;
 import type {
   VideoProject,
   VideoProjectScene,
@@ -54,6 +60,7 @@ export async function buildVideoProject(
       }
 
       let voiceoverUrl: string | null = null;
+      let durationSeconds = scene.durationSeconds;
       if (scene.voiceoverLine) {
         try {
           const voice = await generateSceneVoiceover(
@@ -69,6 +76,16 @@ export async function buildVideoProject(
               voice.mimeType,
               `scene-${scene.order}-voiceover.${ext}`,
             );
+            try {
+              const audioSeconds = await getAudioDurationSeconds(file);
+              durationSeconds = Math.max(
+                durationSeconds,
+                audioSeconds + VOICEOVER_DURATION_BUFFER_SECONDS,
+              );
+            } catch {
+              // Keep the script's own estimate if the browser can't read the clip's duration —
+              // the scene still gets its voiceover, just without the fit guarantee.
+            }
             // Reuses the same Cloudinary upload path as every other asset, but isn't registered
             // via createAsset: the Asset Library's schema only models "image" | "video" kinds
             // (see src/lib/assets/schema.ts) and its UI has no audio renderer — widening that is
@@ -84,7 +101,7 @@ export async function buildVideoProject(
 
       return {
         order: scene.order,
-        durationSeconds: scene.durationSeconds,
+        durationSeconds,
         visualDescription: scene.visualDescription,
         onScreenText: scene.onScreenText,
         voiceoverLine: scene.voiceoverLine,
