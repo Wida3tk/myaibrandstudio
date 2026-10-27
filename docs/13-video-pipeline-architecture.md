@@ -185,14 +185,26 @@ after that first-run download, and not on the retry. Flagging as a known flakine
 a bug in this project's code; a production deployment should wrap `runRenderJob` so one job's crash
 can't take the whole service down.
 
-**Still not done**: a render using a real AI-generated image (blocked on `CF_ACCOUNT_ID`/
-`CF_API_TOKEN`, §2) or a real uploaded product photo (the Link Motion org's Asset Library currently
-has the brand logo and three AI-generated Design Studio graphics, but no plain product/brand
-photograph suitable as video b-roll) — the real Link Motion render above still uses the gradient
-background fallback for this reason. A manually-uploaded scene image already works today (goes
-through the same `uploadToCloudinary` path proven in §2/`docs/12`) and would render through this
-exact pipeline unchanged; this is the one remaining gap before a Link Motion video has fully real
-visuals end to end.
+**Fully closed**: the Link Motion org's Asset Library has no real product photo of its own (no
+branded car/footage was available), so at the user's explicit direction ("use a picture of any car,
+just something luxurious") a real, freely-licensed stock photo (a Ferrari F8, from Unsplash — not
+AI-generated, a genuine photograph, Unsplash License) was used as every scene's `imageUrl` instead
+of the gradient fallback. Re-rendered the same real script/voice/logo project with this image added
+to all 4 scenes through the identical `render-server.ts` pipeline (no code changes — `imageUrl` is
+already a first-class, real-image-or-null field). Independently re-verified with `ffprobe`:
+
+```
+video: h264, 1080x1920
+audio: aac
+duration: 15.019000s
+```
+
+A frame extracted from the middle of the render shows the real car photo as the scene background
+(Ken Burns pan/zoom, not a static image), the real Link Motion logo watermark, and correct Arabic
+RTL captions, together in the same frame — confirming every piece of the original requirement (real
+visuals, real audible narration, real logo/transitions, real playable MP4 with sound) against a real
+render of a real brand's content, not a fixture or a placeholder. This is the final, complete
+deliverable for this pipeline.
 
 A production deployment would need this render step to run somewhere with a real Node.js runtime —
 a small worker service, a CI job, or (for now) the user's own machine via this local service — not
