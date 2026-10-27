@@ -15,6 +15,7 @@ export const exampleProps: ShortFormVideoProps = {
     {
       order: 1,
       durationInFrames: 3 * FPS,
+      videoUrl: null,
       imageUrl: null,
       onScreenText: "Ready to level up?",
       voiceoverLine: "Ready to level up your weekend?",
@@ -23,6 +24,7 @@ export const exampleProps: ShortFormVideoProps = {
     {
       order: 2,
       durationInFrames: 4 * FPS,
+      videoUrl: null,
       imageUrl: null,
       onScreenText: "Join 500+ learners",
       voiceoverLine: "Join hundreds of learners in our weekend course.",
@@ -31,6 +33,7 @@ export const exampleProps: ShortFormVideoProps = {
     {
       order: 3,
       durationInFrames: 3 * FPS,
+      videoUrl: null,
       imageUrl: null,
       onScreenText: "Enroll today",
       voiceoverLine: "Enroll today and start your journey.",
@@ -49,6 +52,7 @@ export const examplePropsArabic: ShortFormVideoProps = {
     {
       order: 1,
       durationInFrames: 3 * FPS,
+      videoUrl: null,
       imageUrl: null,
       onScreenText: "هل أنت مستعد للتطور؟",
       voiceoverLine: "هل أنت مستعد لتطوير مسيرتك في نهاية الأسبوع؟",
@@ -57,6 +61,7 @@ export const examplePropsArabic: ShortFormVideoProps = {
     {
       order: 2,
       durationInFrames: 4 * FPS,
+      videoUrl: null,
       imageUrl: null,
       onScreenText: "+٥٠٠ متدرب",
       voiceoverLine: "انضم إلى مئات المتدربين في دورتنا الأسبوعية.",
@@ -65,6 +70,7 @@ export const examplePropsArabic: ShortFormVideoProps = {
     {
       order: 3,
       durationInFrames: 3 * FPS,
+      videoUrl: null,
       imageUrl: null,
       onScreenText: "سجّل الآن",
       voiceoverLine: "سجّل اليوم وابدأ رحلتك.",

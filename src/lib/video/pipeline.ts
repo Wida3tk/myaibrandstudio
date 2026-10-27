@@ -88,6 +88,9 @@ export async function buildVideoProject(
         visualDescription: scene.visualDescription,
         onScreenText: scene.onScreenText,
         voiceoverLine: scene.voiceoverLine,
+        // No AI video-generation provider exists (see docs/13) — real motion footage only comes
+        // from the Video Studio page's per-scene "upload a real video" path.
+        videoUrl: null,
         imageUrl,
         voiceoverUrl,
       };

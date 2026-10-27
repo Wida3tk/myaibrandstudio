@@ -18,6 +18,8 @@ export interface VideoProjectScene {
   visualDescription: string;
   onScreenText: string;
   voiceoverLine: string;
+  /** A real video clip for this scene, when one was provided — takes priority over imageUrl. */
+  videoUrl: string | null;
   imageUrl: string | null;
   voiceoverUrl: string | null;
 }

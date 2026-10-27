@@ -10,6 +10,7 @@ import {
   Volume2,
   VolumeX,
   Film,
+  Video,
   AlertTriangle,
 } from "lucide-react";
 import { Player } from "@remotion/player";
@@ -49,6 +50,7 @@ function toPlayerProps(
     scenes: project.scenes.map((scene) => ({
       order: scene.order,
       durationInFrames: Math.round(scene.durationSeconds * FPS),
+      videoUrl: scene.videoUrl,
       imageUrl: scene.imageUrl,
       onScreenText: scene.onScreenText,
       voiceoverLine: scene.voiceoverLine,
@@ -69,6 +71,9 @@ export default function VideoStudioPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingScene, setUploadingScene] = useState<number | null>(null);
+  const [uploadingVideoScene, setUploadingVideoScene] = useState<number | null>(
+    null,
+  );
 
   const [renderServiceAvailable, setRenderServiceAvailable] = useState<
     boolean | null
@@ -163,6 +168,29 @@ export default function VideoStudioPage() {
       setError(err instanceof Error ? err.message : "Failed to upload image.");
     } finally {
       setUploadingScene(null);
+    }
+  }
+
+  async function handleSceneVideoUpload(order: number, file: File) {
+    setUploadingVideoScene(order);
+    try {
+      const uploaded = await uploadToCloudinary(file);
+      setProject((prev) =>
+        prev
+          ? {
+              ...prev,
+              scenes: prev.scenes.map((scene) =>
+                scene.order === order
+                  ? { ...scene, videoUrl: uploaded.url }
+                  : scene,
+              ),
+            }
+          : prev,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload video.");
+    } finally {
+      setUploadingVideoScene(null);
     }
   }
 
@@ -266,18 +294,24 @@ export default function VideoStudioPage() {
                       <span className="text-text">{scene.onScreenText}</span>
                       <div className="flex items-center gap-2 text-text-muted">
                         <span className="inline-flex items-center gap-1">
-                          {scene.imageUrl ? (
+                          {scene.videoUrl ? (
+                            <Video size={12} aria-hidden="true" />
+                          ) : scene.imageUrl ? (
                             <Check size={12} aria-hidden="true" />
                           ) : (
                             <ImageOff size={12} aria-hidden="true" />
                           )}
-                          {scene.imageUrl
+                          {scene.videoUrl
                             ? locale === "ar"
-                              ? "صورة"
-                              : "image"
-                            : locale === "ar"
-                              ? "تدرج"
-                              : "gradient"}
+                              ? "فيديو"
+                              : "video"
+                            : scene.imageUrl
+                              ? locale === "ar"
+                                ? "صورة"
+                                : "image"
+                              : locale === "ar"
+                                ? "تدرج"
+                                : "gradient"}
                         </span>
                         <span className="inline-flex items-center gap-1">
                           {scene.voiceoverUrl ? (
@@ -294,7 +328,31 @@ export default function VideoStudioPage() {
                               : "silent"}
                         </span>
                       </div>
-                      {!scene.imageUrl && (
+                      {!scene.videoUrl && (
+                        <label className="mt-1 inline-flex w-fit cursor-pointer items-center gap-1 rounded-[var(--radius-sm)] border border-border px-2 py-1 text-[11px] text-text-muted hover:border-accent hover:text-accent">
+                          <Video size={12} aria-hidden="true" />
+                          {uploadingVideoScene === scene.order
+                            ? locale === "ar"
+                              ? "جارٍ الرفع..."
+                              : "Uploading..."
+                            : locale === "ar"
+                              ? "رفع فيديو حقيقي (متحرك)"
+                              : "Upload a real video clip"}
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            disabled={uploadingVideoScene === scene.order}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file)
+                                void handleSceneVideoUpload(scene.order, file);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                      )}
+                      {!scene.videoUrl && !scene.imageUrl && (
                         <label className="mt-1 inline-flex w-fit cursor-pointer items-center gap-1 rounded-[var(--radius-sm)] border border-border px-2 py-1 text-[11px] text-text-muted hover:border-accent hover:text-accent">
                           <ImagePlus size={12} aria-hidden="true" />
                           {uploadingScene === scene.order

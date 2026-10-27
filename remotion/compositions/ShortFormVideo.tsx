@@ -3,6 +3,7 @@ import {
   AbsoluteFill,
   Audio,
   Img,
+  OffthreadVideo,
   Series,
   interpolate,
   spring,
@@ -31,9 +32,11 @@ function useSceneTransitionOpacity(durationInFrames: number): number {
   );
 }
 
-/** Slow, constant Ken Burns zoom over the scene's own duration — never past 1.12x, so it never
- * reveals the image's edge regardless of the scene length. */
-function KenBurnsBackground({
+/** Real video clip when the scene has one (actual motion, not a panned still) — falls back to a
+ * Ken-Burns-panned image, then a brand-colored gradient. A slow, constant zoom (never past 1.12x,
+ * so it never reveals an image's edge) is layered on all three for a consistent feel; on video it
+ * reads as a subtle push-in over real footage rather than the only source of motion. */
+function SceneBackground({
   scene,
   colorPalette,
 }: {
@@ -45,9 +48,25 @@ function KenBurnsBackground({
     extrapolateRight: "clamp",
   });
 
+  if (scene.videoUrl) {
+    return (
+      <AbsoluteFill style={{ overflow: "hidden" }}>
+        <OffthreadVideo
+          src={scene.videoUrl}
+          muted
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            transform: `scale(${scale})`,
+          }}
+        />
+      </AbsoluteFill>
+    );
+  }
+
   if (!scene.imageUrl) {
-    // No image provider configured/available for this scene — a brand-colored gradient, never a
-    // faked image.
+    // No image or video provided for this scene — a brand-colored gradient, never a faked image.
     return (
       <AbsoluteFill
         style={{
@@ -151,7 +170,7 @@ function SceneContent({
   const opacity = useSceneTransitionOpacity(scene.durationInFrames);
   return (
     <AbsoluteFill style={{ opacity }}>
-      <KenBurnsBackground scene={scene} colorPalette={colorPalette} />
+      <SceneBackground scene={scene} colorPalette={colorPalette} />
       <SceneCaption scene={scene} language={language} />
       {scene.voiceoverUrl && <Audio src={scene.voiceoverUrl} />}
     </AbsoluteFill>
