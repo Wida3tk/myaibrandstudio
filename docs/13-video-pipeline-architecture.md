@@ -60,24 +60,31 @@ the Flux image model (so currently unavailable for the same reason as §2), Engl
 voice). A scene with a failed/unavailable voiceover renders silently; the spoken line still appears
 as an on-screen caption.
 
-**Root cause found and fixed, not yet deployed.** A direct authenticated test against the live
-Worker showed voiceover failing even for English, where a valid voice name was already in use —
-`index.ts`'s error handling turned out to have a real bug: `VoiceoverProviderUnavailableError` was
-thrown both when nothing is configured _and_ when every provider actually failed, and the handler's
-catch checked that type first, so the real Groq error was never logged server-side either, even
-though `GROQ_API_KEY` is confirmed present and working (it powers the script writer on this same
-Worker). That's fixed — the error now carries its per-provider `attempts`, and the handler logs
-them. Separately, confirmed against Groq's own docs (`console.groq.com/docs/text-to-speech/orpheus`,
-fetched 2026-10-27): the Arabic voice name in code, `"layla"`, is not a real voice for
-`canopylabs/orpheus-arabic-saudi` — the real voices are `abdullah, fahad, sultan` (male) and
-`lulwa, noura, aisha` (female); fixed to `"fahad"` (the docs' own example voice). The English voice,
-`"austin"`, was already valid. **Both fixes are in this branch but not deployed** — deploying the
-Worker needs separate approval (see PR description); until then, live voiceover is unverified
-beyond documentation research, same as image generation above. Also still open: whether GroqCloud's
-Services Agreement (separate from groq.com's public Terms of Use, which explicitly excludes API
-usage) covers commercial use of free-tier TTS output, and that both Orpheus models are labelled
-"Preview" by Groq ("should not be used in production environments as they may be discontinued at
-short notice").
+**Root cause found, fixed, and deployed — confirmed live and working.** A direct authenticated test
+against the live Worker initially showed voiceover failing even for English, where a valid voice
+name was already in use — `index.ts`'s error handling turned out to have a real bug:
+`VoiceoverProviderUnavailableError` was thrown both when nothing is configured _and_ when every
+provider actually failed, and the handler's catch checked that type first, so the real Groq error
+was never logged server-side either, even though `GROQ_API_KEY` is confirmed present and working
+(it powers the script writer on this same Worker). That's fixed — the error now carries its
+per-provider `attempts`, and the handler logs them. Separately, confirmed against Groq's own docs
+(`console.groq.com/docs/text-to-speech/orpheus`, fetched 2026-10-27): the Arabic voice name in code,
+`"layla"`, is not a real voice for `canopylabs/orpheus-arabic-saudi` — the real voices are
+`abdullah, fahad, sultan` (male) and `lulwa, noura, aisha` (female); fixed to `"fahad"` (the docs'
+own example voice). The English voice, `"austin"`, was already valid.
+
+After deploying this fix and re-testing, voiceover was still failing — the newly-deployed logging
+caught the real reason via `wrangler tail`: Groq's `model_terms_required` 400 error on both Orpheus
+models ("The model `canopylabs/orpheus-arabic-saudi` requires terms acceptance. Please have the org
+admin accept the terms at https://console.groq.com/playground?model=canopylabs%2Forpheus-arabic-saudi"),
+a one-time manual step, not a code bug. **After the org admin accepted both models' terms**, a
+direct authenticated re-test against the live Worker confirmed both languages now return real audio:
+`{"available":true,"provider":"groq","mimeType":"audio/wav"}` with a 235,616-byte base64 payload for
+Arabic and 256,096 bytes for English from short test sentences. Voiceover is fully live. Still open:
+whether GroqCloud's Services Agreement (separate from groq.com's public Terms of Use, which
+explicitly excludes API usage) covers commercial use of free-tier TTS output, and that both Orpheus
+models are labelled "Preview" by Groq ("should not be used in production environments as they may be
+discontinued at short notice").
 
 ## 4. Live preview
 
@@ -142,13 +149,50 @@ format=duration`), one video stream, no audio stream (correct: this fixture's ev
 - Arabic fixture: same render path, correct RTL on-screen text confirmed by extracting and visually
   inspecting the poster frame.
 
-Neither fixture has a live-provider image or voiceover (no credentials in this sandbox for either,
-see §2–3) — this proves the rendering engine, the HTTP service, and the progress/stream-probing
-machinery end to end, without faking AI-generated content. **Not yet done**: a render using a real
-Groq-voiced track (blocked on the Worker deploy, §3) or a real AI-generated image (blocked on
-`CF_ACCOUNT_ID`/`CF_API_TOKEN`, §2); a manually-uploaded scene image already works today (goes
+Neither fixture has a live-provider image or voiceover — this proves the rendering engine, the HTTP
+service, and the progress/stream-probing machinery end to end, without faking AI-generated content.
+
+**Also verified for real, after the Groq terms fix above**: a genuine real-provider render, end to
+end, using the real "Link Motion" org on the live, deployed Worker — not a fixture. From the live
+app: generated a real 15s Arabic script for Link Motion (`/video/script`, 4 scenes), fetched real
+Groq-voiced audio for every scene's `voiceoverLine` (`/video/voiceover`, confirmed `provider:
+"groq"` for each), used the real Link Motion logo already present in the org's Asset Library
+(found via the live Asset Library UI — a real uploaded Cloudinary asset, not generated) as
+`logoUrl`, and rendered through this exact `render-server.ts` pipeline. Independently verified the
+output myself (not just trusting the service's own probe):
+
+```
+ffprobe -show_entries stream=codec_type,codec_name,width,height -show_entries format=duration
+  video: h264, 1080x1920
+  audio: aac
+  duration: 15.019000s
+```
+
+A frame extracted from the middle of the render shows the real Link Motion logo watermark and
+correct Arabic RTL captions (both the on-screen text and the spoken-line caption), confirming the
+whole pipeline — script, real audio for every scene, logo overlay, transitions, 1080×1920 H.264+AAC
+MP4 — is genuinely working against the live app and a real brand, not just fixtures.
+
+**One real bug hit and worked around in this pass**: the render service crashed outright (not just
+that job — the whole Node process died) on its first invocation with a real multi-scene job, with
+`Error: kill EBADF` thrown from `@remotion/renderer`'s `call-ffmpeg.js` during cancel/cleanup
+(`ChildProcess.kill` on an already-exited process), an uncaught `'error'` event that took the server
+down. This happened right after a one-time 120MB Chrome Headless Shell download triggered by the
+first real render on this machine. Restarting the service (Chrome now cached) and resubmitting the
+identical job succeeded without the error recurring — so it reproduced exactly once, immediately
+after that first-run download, and not on the retry. Flagging as a known flakiness risk in
+`@remotion/renderer`'s Windows process-cleanup path (Node v25.9.0 on this machine) rather than
+a bug in this project's code; a production deployment should wrap `runRenderJob` so one job's crash
+can't take the whole service down.
+
+**Still not done**: a render using a real AI-generated image (blocked on `CF_ACCOUNT_ID`/
+`CF_API_TOKEN`, §2) or a real uploaded product photo (the Link Motion org's Asset Library currently
+has the brand logo and three AI-generated Design Studio graphics, but no plain product/brand
+photograph suitable as video b-roll) — the real Link Motion render above still uses the gradient
+background fallback for this reason. A manually-uploaded scene image already works today (goes
 through the same `uploadToCloudinary` path proven in §2/`docs/12`) and would render through this
-exact pipeline unchanged.
+exact pipeline unchanged; this is the one remaining gap before a Link Motion video has fully real
+visuals end to end.
 
 A production deployment would need this render step to run somewhere with a real Node.js runtime —
 a small worker service, a CI job, or (for now) the user's own machine via this local service — not
